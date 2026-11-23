@@ -34,13 +34,15 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
 |---|---|---|
 | ✅ | reinforce what it just said | it confirms: you did what it confidently expected |
 | ❌ | counter-reinforce, it retries | it objects: you broke a confident expectation |
-| ❓ | "your turn / what comes next?" (also: passing): **one** best guess, then it waits for you. Below 25% certainty it asks back ❓. **Several ❓ in a row** make a totally new emoji likelier: +35% per extra ❓ (2nd ≈ 35%, 3rd ≈ 70%, max 85%) *(0.8)* | "I don't know / I'm listening" when it has no pattern. Your next emoji counts ×3 |
+| ❓ | "your turn / what comes next?" (also: passing): **one** best guess, then it waits for you. Pressing ❓ again and again draws out a learned chain step by step, so you can ✅ longer chains *(0.11)*. Below 25% certainty it asks back ❓, and **several ❓ in a row** there make a surprise likelier: +35% per extra ❓ (2nd ≈ 35%, 3rd ≈ 70%, max 85%) | "I don't know / I'm listening" when it has no pattern. Your next emoji counts ×3 |
 
 ❤️ and 💬 are ordinary emojis now. *(0.8: 💬 (wait/pass) merged into ❓; old saves are converted.)*
 
 ## How it picks its emoji
 
-1. You sent ❓? → one best guess (or a surprise if you sent several ❓ in a row).
+1. You sent ❓? → if it knows how the recent sequence continues (its own emojis included), it follows
+   that pattern, however many ❓ in a row (D59). Only if it doesn't know: ❓ back, or with several ❓
+   in a row a surprise.
 2. Out of energy / sleepy? → sleeps.
 3. You said ❌? → something other than what you rejected.
 4. Sometimes reacts with ✅ / ❌ (see above).
@@ -68,7 +70,8 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
 Fixed capacity: ~80 of your inputs (≈ 6–8 min). Below 25% energy it can nod off. It falls asleep
 after 2 min alone. Energy recovers in ~60 min. One dream emoji every 3 s (≈ 1,200 per full sleep).
 It wakes by itself 2–20 s after it's rested while the app is open, or when you send an emoji
-(groggy if early).
+(groggy if early). While it sleeps, each dreamed emoji rises small from its head in a wavy zig-zag,
+following the one before (a dreaming animation, D61). A creature that knows nothing yet dreams nothing.
 
 ## Settings (test panel sliders)
 
@@ -146,15 +149,20 @@ heavy event, like an answer to its ❓, doesn't count as a learned pattern. Test
 
 Broad test over 10 days: chaotic player 0.4 → 1.3; structured players ~20 → 100–140; minimalist ~20.
 
-**Appearance basis** (graphics come later). Four slots: **face, extremities, hair/hat, object**.
-- The emojis that weigh most in its learned patterns fill them, in that order. Before it has learned
-  anything, its seed character does.
-- Each slot gets a shape variant (1–8, from emoji + slot) and a colour (from the emoji, 12 pastels).
-- More slots unlock with complexity: face from the start, then at 4, 10, 20.
-- **Stable:** recomputed only after sleep, and a slot only switches to another emoji if that one
-  weighs **1.5×** more.
-- Broad test: the look changes after ~75% of sessions on days 1–2, then after only 0–17%; with a
-  player who changes style it morphs again.
+**Appearance basis** (graphics come later; gradual since 0.11, D58). Four slots: **face,
+extremities, hair/hat, object**, each with continuous traits **shape, size, texture** (0…1) and a
+**hue**.
+- Every emoji carries its own fixed trait values. The creature's traits are a **blend** of the 8
+  emojis that weigh most in its learned patterns (shares by weight², so the strongest dominate).
+  Before it has learned anything, its seed character is the blend.
+- So a small change in its patterns moves the look a little, and a whole new "language" moves it a
+  lot. (The blend is rescaled so a mix of many emojis varies as much as a single one would.)
+- **Gradual:** recomputed only after sleep, moving **half the way** (lookFollow 0.5) to the new blend.
+  A big change takes a few nights.
+- Slots **fade in** with complexity: face from the start; extremities from 4 (full at 8), hair from
+  10 (full at 20), object from 20 (full at 40).
+- Test: a little more of the same → difference 0.03; a whole new language → 0.25 after one night,
+  0.43 after three (0 = same, ~0.3+ = clearly different).
 
 **Melodies.** Every symbol has its own 5-step melody: **500 ms** total, 100 ms per step. Only the
 creature's signs play (yours are silent), and its reply comes at least 0.6 s after your sign.
@@ -166,20 +174,21 @@ creature's signs play (yours are silent), and its reply comes at least 0.6 s aft
   emojis sound related.
 - **Fixed signs** (C major): ✅ G6 · · · C7 (rising fourth), ❌ G6 · · · C6 (falling fifth),
   ❓ E6 · E6 · E6.
-- **Voice** (`src/core/voice.js`): how it sounds follows the appearance basis, so look and sound
-  will match later. A locked slot keeps the default, so the voice gets richer as it grows.
+- **Voice** (`src/core/voice.js`, D60): one synth recipe with continuous settings, driven by the
+  look's traits, so it changes as gradually as the look. A slot's influence fades in with its
+  presence; until then the default (marimba-like) stays.
 
   | Slot | Sound |
   |---|---|
-  | face shape | instrument: chip, bell, marimba, pluck, flute, organ, brass, whistle |
-  | face colour | the instrument's own tone setting (bell: how metallic; marimba: knock; pluck: brightness; flute: breath; organ: stops; brass: blare; whistle: beating; chip: octave) |
-  | extremities shape | articulation: short and plucked (35% of a step) … long and smooth (95%) |
-  | hair shape | glide into each note: scoop up 8% … drop down 8% ("boop") |
-  | object shape | wobble (vibrato, 0–3%) |
+  | face shape / size / texture | rich (pure tone … many overtones) / struck (held … struck and ringing) / metal (wood … bell) |
+  | extremities shape / size | note length (35% … 95% of a step) / hollow (fewer even overtones: chip-like) |
+  | hair shape / size | glide into each note (scoop up 8% … drop down 8%) / breath (airy noise) |
+  | object shape / size | wobble (vibrato, 0–3%) / chorus (a second, detuned voice) |
 
-  The instruments are tiny Web Audio recipes in `src/ui/sound.js` (no samples). The voice changes
-  only when the look changes (after sleep). The test panel shows the current voice and has
-  **▶ its voice** and **▶ all instruments** (its last sign on each instrument) to listen.
+  Familiar instruments are regions of this space (archetypes: whistle, flute, organ, chip, marimba,
+  bell, pluck, brass); the panel names the closest one. Newborns already differ (16 newborns: 5
+  archetypes). Web Audio, no samples (`src/ui/sound.js`). The test panel shows the voice and has
+  **▶ its voice** and **▶ archetypes** (its last sign in each archetype) to listen.
 - Middle steps can be pauses; the first and last always sound. Same emoji, same melody.
   **Sound on/off** in the test panel, which also shows the last sign's notes.
 

@@ -36,7 +36,7 @@ export function buildPanel(root, h) {
         <button data-act="reset" class="danger">reset</button>
         <button data-act="sound"></button>
         <button data-act="hear">▶ its voice</button>
-        <button data-act="instruments">▶ all instruments</button>
+        <button data-act="instruments">▶ archetypes</button>
         <span class="note"></span>
         <input type="file" accept="application/json,.json" hidden>
       </div>
@@ -185,9 +185,9 @@ export function buildPanel(root, h) {
     const look = LOOK_SLOTS.map((slot, i) => {
       const x = m.look[slot];
       const lock = p.lookUnlock[i];
-      return x
-        ? `<tr><td>${slot}</td><td><span class="swatch" style="background:${x.color}"></span> ${x.emoji} · shape ${x.shape + 1}/${p.lookVariants} · ${x.color}</td></tr>`
-        : `<tr><td>${slot}</td><td class="dim">unlocks at complexity ${lock}</td></tr>`;
+      if (!x) return '';
+      const fade = x.presence < 1 ? ` · <span class="dim">present ${Math.round(x.presence * 100)}% (from complexity ${lock}, full at ${lock * 2})</span>` : '';
+      return `<tr><td>${slot}</td><td><span class="swatch" style="background:${x.color};opacity:${0.25 + 0.75 * x.presence}"></span> shape ${num(x.shape, 2)} · size ${num(x.size, 2)} · texture ${num(x.texture, 2)} · hue ${x.hue}°${fade}</td></tr>`;
     });
     const lastTok = (() => {
       for (let i = s.save.history.length - 1; i >= 0; i--) if (s.save.history[i].who === 'C') return s.save.history[i].tok;
@@ -196,9 +196,10 @@ export function buildPanel(root, h) {
     out.push(`<section><h3>complexity & appearance basis</h3>
       <div>complexity <b>${num(cx.score, 1)}</b> · ${cx.signs} emojis in learned patterns <span class="dim">(Σ log2(1 + different patterns per emoji); random spam adds nothing)</span></div>
       <div>most varied: ${topSigns || '–'}</div>
-      <h4>look <span class="dim">(recomputed after each sleep; switches only when another emoji weighs ${p.lookStickiness}× more)</span></h4>
+      <h4>look <span class="dim">(a blend of its strongest pattern emojis; after each sleep it moves ${Math.round(p.lookFollow * 100)}% of the way to the new blend)</span></h4>
+      <div class="dim">blended from: ${m.lookMix.slice(0, 8).map(([e, q]) => `${e} ${Math.round(q * 100)}%`).join(' · ') || '–'}</div>
       <table class="rules">${look.join('')}</table>
-      <div class="dim">voice: ${voiceText(voiceFor(m.look, p.lookVariants))}</div>
+      <div class="dim">voice: ${voiceText(voiceFor(m.look))}</div>
       ${lastTok ? `<div class="dim">melody of its last sign ${lastTok}: ${melodyText(lastTok)} (${KEY_NAMES[keyOf(lastTok)]} major)</div>` : ''}
     </section>`);
 

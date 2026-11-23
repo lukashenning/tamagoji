@@ -1,6 +1,6 @@
 // Plays a symbol's 5-note melody in the creature's voice (Web Audio).
-// The voice (src/core/voice.js) picks one of 8 small synth instruments plus articulation, glide and
-// wobble. The browser only allows sound after a user gesture, so the audio context starts on the first click.
+// The voice (src/core/voice.js) sets one continuous synth recipe (overtones, metal, breath, chorus,
+// struck/held, length, glide, wobble). The browser only allows sound after a user gesture, so the audio context starts on the first click.
 
 import { melodyFor, MELODY_MS, MELODY_STEPS } from '../core/melody.js';
 import { DEFAULT_VOICE } from '../core/voice.js';
@@ -50,149 +50,91 @@ function noiseBuffer(ac) {
 }
 
 // ── one note ──
-// Each instrument is a tiny recipe: which oscillators (partials) at which frequency ratios and levels,
-// and how the loudness moves over time (percussive = strike and fade, sustained = hold and release).
+// One recipe with continuous settings (src/core/voice.js), so the sound can change gradually:
+// a tone with overtones (rich, hollow), an optional metallic shimmer (metal = fast pitch modulation),
+// breath noise, a detuned second voice (chorus), and a loudness curve from held to struck (struck).
 
 function playNote(ac, out, freq, t, step, v, volume) {
-  const len = step * v.length; // how long the note sounds
-  const tone = v.tone;
-  const note = ac.createGain(); // the note's loudness envelope
+  const len = step * v.length; // how long the note is held
+  const note = ac.createGain(); // the note's loudness curve
   note.connect(out);
 
-  // a shared vibrato for all partials
-  let lfo = null;
-  if (v.wobble) {
+  let lfo = null; // shared vibrato
+  if (v.wobble > 0.001) {
     lfo = ac.createOscillator();
     lfo.frequency.value = 16;
     lfo.start(t);
   }
   const stops = [];
-  // add an oscillator at `ratio` × the note's frequency
-  const partial = (type, ratio, level, dest = note) => {
+  const osc = (ratio, level) => {
     const f = freq * ratio;
-    const osc = ac.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(f * (1 + v.glide), t); // glide into the note ("boop" when it drops)
-    osc.frequency.exponentialRampToValueAtTime(f, t + Math.min(0.03, len * 0.5));
+    const o = ac.createOscillator();
+    o.frequency.setValueAtTime(f * (1 + v.glide), t); // glide into the note ("boop" when it drops)
+    o.frequency.exponentialRampToValueAtTime(f, t + Math.min(0.03, len * 0.5));
     if (lfo) {
       const depth = ac.createGain();
       depth.gain.value = f * v.wobble;
-      lfo.connect(depth).connect(osc.frequency);
+      lfo.connect(depth).connect(o.frequency);
     }
     const g = ac.createGain();
     g.gain.value = level;
-    osc.connect(g).connect(dest);
-    osc.start(t);
-    stops.push(osc);
-    return { osc, g };
-  };
-  const perc = (peak, decay) => {
-    note.gain.setValueAtTime(0.0001, t);
-    note.gain.exponentialRampToValueAtTime(peak, t + 0.004);
-    note.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-    return decay;
-  };
-  const sustain = (peak, attack) => {
-    note.gain.setValueAtTime(0.0001, t);
-    note.gain.exponentialRampToValueAtTime(peak, t + attack);
-    note.gain.setValueAtTime(peak, t + Math.max(attack, len - 0.015));
-    note.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.01);
-    return len + 0.01;
+    o.connect(g).connect(note);
+    o.start(t);
+    stops.push(o);
+    return o;
   };
 
-  let dur;
-  switch (v.instrument) {
-    case 'chip': {
-      // retro game console: square wave; tone adds a thin octave above
-      partial('square', 1, 0.5);
-      partial('square', 2, 0.25 * tone);
-      dur = sustain(0.22 * volume, 0.003);
-      break;
-    }
-    case 'bell': {
-      // FM bell: a second oscillator wobbles the pitch very fast; tone picks how metallic (the ratio)
-      const ratio = [1.41, 2.0, 2.76, 3.5][Math.min(3, Math.floor(tone * 4))];
-      const car = partial('sine', 1, 1);
-      const mod = ac.createOscillator();
-      mod.frequency.value = freq * ratio;
-      const idx = ac.createGain();
-      idx.gain.setValueAtTime(freq * 2.5, t);
-      idx.gain.exponentialRampToValueAtTime(freq * 0.05, t + len * 1.5);
-      mod.connect(idx).connect(car.osc.frequency);
-      mod.start(t);
-      stops.push(mod);
-      dur = perc(0.3 * volume, len * 1.8);
-      break;
-    }
-    case 'marimba': {
-      // wooden bar: a pure tone plus a short knock at ~4× (tone = how loud the knock is)
-      partial('sine', 1, 1);
-      const knock = partial('sine', 3.98, 0.15 + 0.5 * tone);
-      knock.g.gain.setValueAtTime(0.15 + 0.5 * tone, t);
-      knock.g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-      dur = perc(0.45 * volume, len * 1.3);
-      break;
-    }
-    case 'pluck': {
-      // plucked string: bright sawtooth that quickly turns soft (tone = how bright the pluck is)
-      const lp = ac.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.Q.value = 2;
-      lp.frequency.setValueAtTime(freq * (4 + 6 * tone), t);
-      lp.frequency.exponentialRampToValueAtTime(freq * 1.2, t + len);
-      lp.connect(note);
-      partial('sawtooth', 1, 1, lp);
-      dur = perc(0.3 * volume, len * 1.2);
-      break;
-    }
-    case 'flute': {
-      // airy tone: soft attack, a little breath noise (tone = how breathy)
-      partial('sine', 1, 1);
-      partial('sine', 2, 0.15);
-      const n = ac.createBufferSource();
-      n.buffer = noiseBuffer(ac);
-      const bp = ac.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = freq * 2;
-      bp.Q.value = 1.5;
-      const ng = ac.createGain();
-      ng.gain.value = 0.1 + 0.5 * tone;
-      n.connect(bp).connect(ng).connect(note);
-      n.start(t);
-      stops.push(n);
-      dur = sustain(0.32 * volume, 0.025);
-      break;
-    }
-    case 'organ': {
-      // drawbar organ: a few harmonics at once (tone = which mix of stops)
-      partial('sine', 1, 1);
-      partial('sine', 2, 0.6 * (1 - tone) + 0.2);
-      partial('sine', 3, 0.5 * tone);
-      partial('sine', 4, 0.3 * tone);
-      dur = sustain(0.22 * volume, 0.006);
-      break;
-    }
-    case 'brass': {
-      // tiny horn: sawtooth that opens up at the start of each note (tone = how much it blares)
-      const lp = ac.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.setValueAtTime(freq * 1.5, t);
-      lp.frequency.exponentialRampToValueAtTime(freq * (3 + 5 * tone), t + 0.025);
-      lp.frequency.exponentialRampToValueAtTime(freq * 2.5, t + len);
-      lp.connect(note);
-      partial('sawtooth', 1, 1, lp);
-      partial('sawtooth', 1.005, 0.6, lp); // slightly detuned: fuller
-      dur = sustain(0.2 * volume, 0.015);
-      break;
-    }
-    default: {
-      // whistle: a pure tone; tone adds a second, slightly detuned one that "beats"
-      partial('sine', 1, 1);
-      partial('sine', 1 + 0.004 * tone, 0.7 * tone);
-      dur = sustain(0.3 * volume, 0.01);
-    }
+  // overtones 1…6: "rich" lets more through, "hollow" removes the even ones (a hollow, chip-like sound)
+  let energy = 0;
+  let fundamental = null;
+  for (let n = 1; n <= 6; n++) {
+    let amp = n === 1 ? 1 : Math.pow(0.8 * v.rich, n - 1);
+    if (n % 2 === 0) amp *= 1 - v.hollow;
+    if (amp < 0.01) continue;
+    const o = osc(n, amp);
+    if (n === 1) fundamental = o;
+    energy += amp * amp;
   }
-  const stopAt = t + dur + 0.02;
+  // metal: a fast modulation of the base tone at an uneven ratio gives a bell-like shimmer that fades
+  if (v.metal > 0.02) {
+    const mod = ac.createOscillator();
+    mod.frequency.value = freq * 2.76;
+    const idx = ac.createGain();
+    idx.gain.setValueAtTime(freq * 3 * v.metal, t);
+    idx.gain.exponentialRampToValueAtTime(freq * 0.03 * v.metal + 0.01, t + len * 1.2);
+    mod.connect(idx).connect(fundamental.frequency);
+    mod.start(t);
+    stops.push(mod);
+  }
+  // chorus: a second, slightly detuned base tone (a fuller, beating sound)
+  if (v.chorus > 0.02) {
+    osc(1 + 0.006 * v.chorus, 0.7 * v.chorus);
+    energy += (0.7 * v.chorus) ** 2;
+  }
+  // breath: a little band of noise around the tone
+  if (v.breath > 0.02) {
+    const n = ac.createBufferSource();
+    n.buffer = noiseBuffer(ac);
+    const bp = ac.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = freq * 2;
+    bp.Q.value = 1.5;
+    const ng = ac.createGain();
+    ng.gain.value = 0.6 * v.breath;
+    n.connect(bp).connect(ng).connect(note);
+    n.start(t);
+    stops.push(n);
+  }
+
+  // loudness: held (organ, flute) … struck (marimba, bell, pluck: quick fade, rings a bit after)
+  const peak = (0.28 * volume) / Math.sqrt(Math.max(1, energy));
+  const attack = 0.003 + (1 - v.struck) * 0.02;
+  const ring = 0.008 + v.struck * 0.05;
+  note.gain.setValueAtTime(0.0001, t);
+  note.gain.linearRampToValueAtTime(peak, t + attack);
+  note.gain.setTargetAtTime(peak * (1 - 0.85 * v.struck), t + attack, 0.03);
+  note.gain.setTargetAtTime(0.0001, t + len, ring);
+  const stopAt = t + len + ring * 6;
   stops.forEach((o) => o.stop(stopAt));
   if (lfo) lfo.stop(stopAt);
 }

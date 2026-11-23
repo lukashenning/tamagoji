@@ -6,7 +6,7 @@ identity (behaviour, later its appearance) should follow from its **token histor
 
 ## Current phase
 
-**Prototype 0.6: the simple core** (2026-11-23), described in `docs/07-simple-core.md`. The user found
+**Prototype 0.11 on the simple core of 0.6** (2026-11-23), described in `docs/07-simple-core.md`. The user found
 v0.5 too complex and not working well, so it was stripped down:
 - one pattern memory over the whole history, used for next-token prediction
 - ✅ / ❌ (re)inforce the emoji, its link to the previous emoji, and its link to the recent sequence
@@ -21,6 +21,8 @@ covers loops of any length, awake and in dreams (D50). In 0.10: "Zuletzt" + hour
 "Zu müde...", 10 MB pruning, complexity score, appearance basis, melodies (D51).
 Melodies: 500 ms, creature only, diatonic with keys per emoji category, fixed ✅ ❌ ❓ (D52); one-octave range (D53); two octaves up, voice from the look (D54),
 8 synth instruments chosen by the face slot (D55). Surprises and all other new emojis come from the hourly keyboard set (D56, D57).
+In 0.11: gradual look (blended traits, half-way per sleep) and a continuous synth voice driven by it
+(D58, D60); ❓ draws out learned chains (D59); dreams rise in a zig-zag animation (D61).
 Next: the user plays it.
 
 **Keep it simple.** The user strongly prefers a small, transparent system. Don't add mechanisms

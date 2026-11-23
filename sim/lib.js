@@ -300,7 +300,7 @@ export function simulate({ persona, seed, days = 10, params = DEFAULT_PARAMS }) 
     S.vocab = mind.vocab.size;
     S.memory = mind.mem.size;
     S.complexity = mind.complexity().score;
-    S.look = Object.values(mind.look).map((x) => x.emoji).join('');
+    S.look = JSON.parse(JSON.stringify(mind.look));
     sessions.push(S);
   }
 

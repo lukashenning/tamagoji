@@ -1,6 +1,6 @@
 // All tunable numbers in one place. See docs/07-simple-core.md.
 
-export const ENGINE_VERSION = '0.10.0';
+export const ENGINE_VERSION = '0.11.0';
 
 export const DEFAULT_PARAMS = {
   // pattern memory
@@ -46,9 +46,9 @@ export const DEFAULT_PARAMS = {
   characterSize: 6,
 
   // appearance basis (docs/07): which emojis define its face, extremities, hair/hat and object
-  lookUnlock: [0, 4, 10, 20], // complexity needed for slot 1 (face), 2, 3, 4
-  lookStickiness: 1.5, // a slot only switches to another emoji if that one weighs 1.5× more
-  lookVariants: 8, // shape variants per slot (graphics come later)
+  lookUnlock: [0, 4, 10, 20], // slots 2–4 fade in from this complexity, fully there at twice it
+  lookTop: 8, // the look is blended from the 8 emojis that weigh most in its patterns
+  lookFollow: 0.5, // after each sleep the look moves halfway to the new blend (gradual change)
 
   // too tired: while asleep with low energy your sign only sometimes wakes it
   tiredBelow: 0.1, // below this energy it never wakes from a sign

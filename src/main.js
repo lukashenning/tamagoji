@@ -5,7 +5,7 @@ import { Mind, wakeChance } from './core/mind.js';
 import { ENGINE_VERSION } from './core/params.js';
 import { SLEEP, WAKE, ASK, ELEMENTALS, isContent } from './core/tokens.js';
 import { recentEmojis, hourlySet, hourLabel } from './core/keyboard.js';
-import { voiceFor, INSTRUMENTS } from './core/voice.js';
+import { voiceFor, ARCHETYPES } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
 import { playMelody, unlockAudio, setSound, soundOn } from './ui/sound.js';
@@ -114,7 +114,7 @@ function tick() {
         const d = m.decide(Math.random, now);
         s.why = d.why;
         append({ t: now, who: d.tok === SLEEP ? 'S' : 'C', tok: d.tok, ...(d.m ? { m: d.m } : {}) });
-        if (d.tok !== SLEEP) playMelody(d.tok, voiceFor(m.look, s.params.lookVariants));
+        if (d.tok !== SLEEP) playMelody(d.tok, voiceFor(m.look));
       }
     }
   } else if (m.sleep) {
@@ -136,6 +136,7 @@ const el = {
   bubble: document.getElementById('bubble'),
   bubbleEmoji: document.getElementById('bubble-emoji'),
   bubbleMark: document.getElementById('bubble-mark'),
+  dreams: document.getElementById('dreams'),
   label: document.getElementById('label'),
   you: document.getElementById('you'),
 };
@@ -150,20 +151,38 @@ function lastEntry(who) {
   return null;
 }
 
+// dreaming: each new dream emoji rises from its head in a wavy zig-zag, following the one before
+let dreamSpawned = -1;
+let lastSpawn = 0;
+function showDream(m) {
+  if (s.dreamShown < dreamSpawned) dreamSpawned = -1; // a new sleep
+  if (s.dreamShown <= dreamSpawned || Date.now() - lastSpawn < 900) return; // catching up: not too dense
+  const tok = m.sleep.dream[s.dreamShown];
+  dreamSpawned = s.dreamShown;
+  if (!tok) return;
+  lastSpawn = Date.now();
+  const d = document.createElement('span');
+  d.className = 'dream-emoji';
+  d.innerHTML = `<span class="wave"></span>`;
+  d.firstChild.textContent = tok;
+  d.addEventListener('animationend', (e) => e.target === d && d.remove());
+  el.dreams.append(d);
+}
+
 function render() {
   const m = s.mind;
   const now = s.clock.now();
   el.creature.classList.toggle('asleep', !m.awake);
 
   if (!m.awake && m.sleep) {
-    const dream = m.sleep.dream[Math.max(0, s.dreamShown)];
-    const remaining = m.isRested(now) ? 0 : (m.sleep.restedAt - now) / (m.sleep.restedAt - m.sleep.start);
-    el.bubble.className = 'bubble dream';
-    el.bubbleEmoji.textContent = s.dreamShown >= 0 && dream ? dream : '';
-    el.bubbleMark.textContent = 'z'.repeat(1 + Math.round(remaining * 2)) + 'Z';
+    el.bubble.className = 'bubble empty';
+    el.bubbleEmoji.textContent = '';
+    el.bubbleMark.textContent = '';
     el.label.textContent = 'sleeping';
+    showDream(m);
     el.you.textContent = '';
   } else {
+    if (el.dreams.firstChild) el.dreams.replaceChildren(); // woke up: dreams vanish
     const c = lastEntry('C');
     const p = lastEntry('P');
     el.bubble.className = 'bubble' + (m.turn === 'C' ? ' faded' : '') + (c ? '' : ' empty');
@@ -218,19 +237,19 @@ const handlers = {
     setSound(!soundOn());
     return soundOn();
   },
-  // listen: its last sign (or ❓) in its voice, or on every instrument one after another
+  // listen: its last sign (or ❓) in its voice, or in each archetype voice one after another
   hearVoice() {
     unlockAudio();
-    playMelody(lastEntry('C')?.tok || ASK, voiceFor(s.mind.look, s.params.lookVariants));
+    playMelody(lastEntry('C')?.tok || ASK, voiceFor(s.mind.look));
   },
   hearInstruments(show) {
     unlockAudio();
     const tok = lastEntry('C')?.tok || ASK;
-    const voice = voiceFor(s.mind.look, s.params.lookVariants);
-    INSTRUMENTS.forEach((instrument, i) =>
+    const voice = voiceFor(s.mind.look);
+    Object.entries(ARCHETYPES).forEach(([name, a], i) =>
       setTimeout(() => {
-        show(`${tok} on ${instrument}`);
-        playMelody(tok, { ...voice, instrument });
+        show(`${tok} as ${name}`);
+        playMelody(tok, { ...voice, ...a });
       }, i * 800),
     );
   },

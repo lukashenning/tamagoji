@@ -90,8 +90,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .bubble.empty { opacity: 0; }
 .bubble.faded { opacity: 0.35; }
-.bubble.dream { background: transparent; box-shadow: none; }
-.bubble.dream #bubble-emoji { opacity: 0.4; }
 #bubble-mark {
   position: absolute;
   right: -10px;
@@ -99,7 +97,32 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 600 18px/1 ui-sans-serif, system-ui;
   color: var(--accent);
 }
-.bubble.dream #bubble-mark { color: var(--dim); right: -20px; letter-spacing: 1px; }
+/* dreams: little emojis rise from its head in a wavy zig-zag, one after another */
+.creature-wrap { position: relative; }
+.dreams { position: absolute; left: 50%; top: 6px; width: 0; height: 0; pointer-events: none; }
+.dream-emoji {
+  position: absolute;
+  left: -13px;
+  top: -13px;
+  font: 26px/1 var(--emoji);
+  opacity: 0;
+  animation: dream-rise 9s linear forwards;
+}
+.dream-emoji .wave { display: inline-block; animation: dream-wave 9s forwards; }
+@keyframes dream-rise {
+  0% { transform: translateY(0) scale(0.35); opacity: 0; }
+  10% { opacity: 0.75; }
+  70% { opacity: 0.55; }
+  100% { transform: translateY(-190px) scale(0.95); opacity: 0; }
+}
+@keyframes dream-wave {
+  0% { transform: translateX(0); animation-timing-function: ease-out; }
+  12.5% { transform: translateX(16px); animation-timing-function: ease-in-out; }
+  37.5% { transform: translateX(-16px); animation-timing-function: ease-in-out; }
+  62.5% { transform: translateX(16px); animation-timing-function: ease-in-out; }
+  87.5% { transform: translateX(-16px); animation-timing-function: ease-in; }
+  100% { transform: translateX(0); }
+}
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
 .you {
   position: absolute;

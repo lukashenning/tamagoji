@@ -2,13 +2,13 @@
 //   /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc -m tests/run.js
 
 import { DEFAULT_PARAMS } from '../src/core/params.js';
-import { Mind, wakeChance } from '../src/core/mind.js';
+import { Mind, wakeChance, lookDistance } from '../src/core/mind.js';
 import { BIRTH, WAIT, SLEEP, WAKE, PASS, YES, NO, ASK, SEP } from '../src/core/tokens.js';
 import { mulberry32 } from '../src/core/rng.js';
 import { ALL } from '../src/core/emojiIndex.js';
 import { hourlySet } from '../src/core/keyboard.js';
 import { melodyFor, melodyNotes, melodyText, keyOf } from '../src/core/melody.js';
-import { voiceFor, voiceText, DEFAULT_VOICE } from '../src/core/voice.js';
+import { voiceFor, voiceText, DEFAULT_VOICE, nearestArchetype } from '../src/core/voice.js';
 import { pruneHistory } from '../src/ui/store.js';
 
 const log = globalThis.print || console.log;
@@ -134,16 +134,37 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
     m.observe({ t: 1e9 + said.length, who: 'C', tok: d.tok, m: d.m });
   }
   check('❓ → one best guess, then your turn', said.join('') === '🍐' && m.turn === 'P', said.join(' '));
-  // several ❓ in a row → a total surprise becomes likely
-  let surprises = 0;
-  o('P', ASK); // 2nd ❓ in a row (its 🍐 came in between)
-  for (let i = 0; i < 200; i++) if (m.decide(mulberry32(100 + i)).m === 'surprise') surprises++;
-  const second = surprises / 200;
-  m.observe({ t: 2e9, who: 'C', tok: '🍋' });
-  o('P', ASK); // 3rd
-  surprises = 0;
-  for (let i = 0; i < 200; i++) if (m.decide(mulberry32(300 + i)).m === 'surprise') surprises++;
-  check('❓ several times in a row → surprise gets likelier', second > 0.2 && surprises / 200 > second, `2nd ❓: ${pct(second)} · 3rd ❓: ${pct(surprises / 200)}`);
+  // several ❓ in a row: it keeps following its learned chain 🍎🍐🍋🍇
+  let follows = 0;
+  for (let run = 0; run < 100; run++) {
+    const r = mulberry32(1000 + run);
+    const f = fresh();
+    for (let i = 0; i < 4; i++) demo(f.o, ['🍎', '🍐', '🍋', '🍇']);
+    demo(f.o, ['🍎']);
+    f.o('C', WAIT);
+    const out = [];
+    for (let k = 0; k < 3; k++) {
+      f.o('P', ASK);
+      const d = f.m.decide(r);
+      out.push(d.tok);
+      f.o('C', d.tok, d.m);
+    }
+    if (out.join('') === '🍐🍋🍇') follows++;
+  }
+  // ...and only where it knows nothing, several ❓ make a surprise likelier
+  const blank = fresh(9);
+  blank.o('C', WAIT);
+  blank.o('P', '🧊');
+  blank.o('C', WAIT);
+  const rates = [];
+  for (let k = 1; k <= 3; k++) {
+    blank.o('P', ASK);
+    let n = 0;
+    for (let i = 0; i < 200; i++) if (blank.m.decide(mulberry32(300 + i)).m === 'surprise') n++;
+    rates.push(n / 200);
+    blank.o('C', WAIT);
+  }
+  check('❓ several in a row: follows its chain; surprise only where it knows nothing', follows >= 90 && rates[0] === 0 && rates[2] > rates[1] && rates[1] > 0.2, `chain 🍐🍋🍇 drawn out by ❓❓❓: ${follows}% · unknown: surprise ${rates.map(pct).join(' → ')}`);
 }
 
 // 4b. surprises come from the current hourly keyboard set (unused ones first)
@@ -281,7 +302,7 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
   const [cs, cl, cv] = [spam.m.complexity(), loop.m.complexity(), varied.m.complexity()];
   check('complexity: spam stays ~0, varied patterns score highest', cs.score < 1 && cv.score > cl.score && cl.score > cs.score, `spam ${cs.score.toFixed(1)} (${spam.m.vocab.size} emojis) · one chain ${cl.score.toFixed(1)} · varied ${cv.score.toFixed(1)} (${cv.signs} emojis)`);
 
-  // appearance basis: filled from its strongest pattern emojis, stable across sleeps
+  // appearance basis: a blend of its strongest pattern emojis; small change → small, big change → big
   const m = varied.m;
   const t = { v: 1e7 };
   const sleepWake = () => {
@@ -290,14 +311,23 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
     m.observe({ t: (t.v += 61 * MIN), who: 'S', tok: WAKE });
   };
   sleepWake();
-  const look1 = JSON.stringify(m.look);
-  demo(varied.o, ['🐸', '🎈']); // a little new input
   sleepWake();
-  const look2 = JSON.stringify(m.look);
-  const slots = Object.keys(m.look).length;
-  check('look: slots filled from pattern emojis, stable after a small change', slots >= 3 && look1 === look2, Object.entries(m.look).map(([k, x]) => `${k} ${x.emoji} (shape ${x.shape}, ${x.color})`).join(' · '));
+  const look0 = JSON.parse(JSON.stringify(m.look));
+  demo(varied.o, ['🌞', '🌻']); // a little more of the same
+  sleepWake();
+  const small = lookDistance(look0, m.look);
+  const look1 = JSON.parse(JSON.stringify(m.look));
+  const other = [['🚗', '🚦'], ['🚦', '🚲'], ['🚲', '🛴'], ['🛴', '🚗'], ['🚗', '🚲'], ['🚌', '🚦']];
+  for (let i = 0; i < 12; i++) for (const pr of other) demo(varied.o, pr); // a whole new language
+  sleepWake();
+  const big1 = lookDistance(look1, m.look);
+  sleepWake();
+  sleepWake();
+  const big3 = lookDistance(look1, m.look);
+  check('look: small change → small difference, big change → big, gradually over nights', small < 0.04 && big1 > small * 4 && big3 > big1, `small ${small.toFixed(3)} · big after 1 night ${big1.toFixed(3)} · after 3 nights ${big3.toFixed(3)} · now from ${m.lookMix.slice(0, 4).map(([e]) => e).join('')}`);
   const baby = fresh(23).m;
-  check('look: a newborn looks like its seed character', baby.look.face && baby.character.includes(baby.look.face.emoji), `face ${baby.look.face && baby.look.face.emoji} from ${baby.character.join('')}`);
+  const fromSeed = baby.lookMix.every(([e]) => baby.character.includes(e)) && baby.look.face.presence === 1 && baby.look.object.presence === 0;
+  check('look: a newborn is blended from its seed character, only the face present', fromSeed, `${baby.lookMix.map(([e]) => e).join('')} · face shape ${baby.look.face.shape}`);
 }
 
 // 6e. melodies: 5 steps, first and last always sound, same emoji = same melody, diatonic in its key
@@ -318,16 +348,18 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
   check('melodies: 5 diatonic notes in the section key, ✅ ❌ ❓ fixed', ok && fixed && sameKey && distinct > 300, `${distinct} different melodies for 400 emojis · ✅ ${melodyText(YES)} · ❌ ${melodyText(NO)} · ❓ ${melodyText(ASK)} · 😀 ${melodyText('😀')} · 😃 ${melodyText('😃')} · 🐶 ${melodyText('🐶')}`);
 }
 
-// 6f. voice: follows the look; locked slots keep the default; different creatures sound different
+// 6f. voice: follows the look's traits; slots not yet present keep the default; newborns differ
 {
   const babies = Array.from({ length: 16 }, (_, i) => fresh(i + 1).m);
   const voices = babies.map((b) => voiceFor(b.look));
-  const onlyFace = voices.every((v, i) => !babies[i].look.extremities && v.length === DEFAULT_VOICE.length && v.glide === DEFAULT_VOICE.glide);
-  const instruments = new Set(voices.map((v) => v.instrument)).size;
-  const full = { face: { shape: 1, color: '#bcd9f2' }, extremities: { shape: 0 }, hair: { shape: 7 }, object: { shape: 7 } };
-  const v = voiceFor(full);
-  const ok = v.instrument === 'bell' && v.length === 0.35 && v.glide === 0.08 && v.wobble === 0.03 && JSON.stringify(voiceFor(full)) === JSON.stringify(v);
-  check('voice: instrument from the look, richer as slots unlock', onlyFace && instruments >= 5 && ok, `${instruments} of 8 instruments among 16 newborns · grown example: ${voiceText(v)}`);
+  const defaultsKept = voices.every((v) => v.length === DEFAULT_VOICE.length && v.glide === DEFAULT_VOICE.glide && v.chorus === DEFAULT_VOICE.chorus);
+  const kinds = new Set(voices.map(nearestArchetype));
+  const inRange = voices.every((v) => ['rich', 'struck', 'metal'].every((k) => v[k] >= 0 && v[k] <= 1));
+  const a = voiceFor(babies[0].look);
+  const near = { ...babies[0].look, face: { ...babies[0].look.face, shape: babies[0].look.face.shape + 0.05 } };
+  const b = voiceFor(near);
+  const smallStep = Math.abs(b.rich - a.rich) <= 0.051 && b.struck === a.struck;
+  check('voice: from the look traits, gradual, defaults until slots are present', defaultsKept && inRange && kinds.size >= 3 && smallStep, `${kinds.size} archetypes among 16 newborns (${[...kinds].join(', ')}) · e.g. ${voiceText(a)}`);
 }
 
 // 6f. storage: pruning drops the oldest sessions but keeps the birth entry

@@ -9,7 +9,22 @@ import { hourlySet } from './keyboard.js';
 import { Memory } from './memory.js';
 
 export const LOOK_SLOTS = ['face', 'extremities', 'hair', 'object'];
-export const LOOK_COLORS = ['#f7c8d0', '#fbd9b8', '#fbe9a8', '#cdeab8', '#b8e3d6', '#bcd9f2', '#cfc8f2', '#e6c6ee', '#f2c6dc', '#d9d0c4', '#c4e0e8', '#e8d8b0'];
+export const LOOK_TRAITS = ['shape', 'size', 'texture']; // continuous, 0…1 (plus a hue per slot)
+
+/** How different two looks are: mean absolute trait difference over the slots (0 = same, ~0.3+ = very different). */
+export function lookDistance(a = {}, b = {}) {
+  let d = 0;
+  let n = 0;
+  for (const slot of LOOK_SLOTS) {
+    const x = a[slot];
+    const y = b[slot];
+    if (!x || !y) continue;
+    for (const t of LOOK_TRAITS) d += Math.abs(x[t] - y[t]);
+    d += Math.abs(((x.hue - y.hue + 540) % 360) - 180) / 180;
+    n += LOOK_TRAITS.length + 1;
+  }
+  return n ? d / n : 0;
+}
 
 /**
  * Chance that your sign wakes it while it sleeps, from its energy (0…1): never below tiredBelow (10%),
@@ -53,8 +68,9 @@ export class Mind {
     this.lastCreatureAsk = false;
     this.askStreak = 0; // your ❓ in a row
 
-    // appearance basis: slot -> { emoji, shape, color } (recomputed at birth and after each sleep)
+    // appearance basis: slot -> { shape, size, texture, hue, presence, color } (at birth and after each sleep)
     this.look = {};
+    this.lookMix = []; // [emoji, share] the look is blended from
     this._cx = null; // cached complexity
 
     // stats for the test panel
@@ -216,15 +232,19 @@ export class Mind {
     const sure = pred.top ? pred.conf * pred.dist.get(pred.top) : 0;
     const base = { pred };
 
-    // 1. you sent ❓: one best guess of what comes next. Several ❓ in a row → likelier a total surprise.
+    // 1. you sent ❓: what comes next? If it knows a continuation of the recent sequence (its own
+    // emojis included), it follows its learned pattern, however many ❓ in a row, so you can draw out
+    // and ✅ longer chains. Only when it doesn't know: ❓ back, or with several ❓ in a row a surprise.
     if (this.asked) {
+      if (pred.top && sure >= p.answerMinSure) {
+        const tok = this.sampleFrom(pred.dist, 0.3, rng);
+        return { tok, m: 'answer', why: { ...base, mode: `continues its pattern (your ❓${this.askStreak > 1 ? ' ×' + this.askStreak : ''})`, top3: this.top3(pred) } };
+      }
       const pAskSurprise = Math.min(0.85, p.askSurprise * (this.askStreak - 1));
       if (rng() < pAskSurprise) {
-        return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: `surprise (your ❓ ×${this.askStreak})` } };
+        return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: `doesn't know: surprise (your ❓ ×${this.askStreak})` } };
       }
-      if (sure < p.answerMinSure) return { tok: ASK, why: { ...base, mode: "doesn't know: asks you back", top3: this.top3(pred) } };
-      const tok = this.sampleFrom(pred.dist, 0.3, rng);
-      return { tok, m: 'answer', why: { ...base, mode: 'answers your ❓ (best guess)', top3: this.top3(pred) } };
+      return { tok: ASK, why: { ...base, mode: "doesn't know: asks you back", top3: this.top3(pred) } };
     }
 
     // 2. sleepy?
@@ -481,35 +501,54 @@ export class Mind {
   }
 
   /**
-   * Appearance basis (graphics come later): the emojis that weigh most in its patterns fill the slots
-   * face, extremities, hair/hat, object, each with a shape variant and colour derived from the emoji.
-   * Stable: a slot only switches when another emoji weighs lookStickiness× more. More slots unlock with
-   * complexity. Before it has learned anything, its seed character defines the look.
+   * Appearance basis (graphics come later). Each slot (face, extremities, hair/hat, object) has
+   * continuous traits: shape, size, texture (0…1) and a hue. Every emoji carries its own fixed trait
+   * values; the creature's traits are a blend of the emojis that weigh most in its learned patterns.
+   * So a small change in its patterns changes the look a little, a big change a lot. After each sleep
+   * the look moves lookFollow (half) of the way to that blend, so even big changes take a few nights.
+   * Slots fade in with complexity (presence 0…1). Before it has learned anything, its seed character
+   * is the blend.
    */
   updateLook() {
     const p = this.p;
     const { weight, score } = this.complexity();
-    const ranked = [...weight].sort((a, b) => b[1] - a[1]);
-    if (!ranked.length) this.character.forEach((e, i) => ranked.push([e, 0.01 * (this.character.length - i)]));
-    const unlocked = p.lookUnlock.filter((th) => score >= th).length;
-    const used = new Set();
+    let ranked = [...weight].sort((a, b) => b[1] - a[1]).slice(0, p.lookTop);
+    if (!ranked.length) ranked = this.character.map((e) => [e, 1]);
+    // sharpened shares: the strongest emojis dominate, the rest still count a little
+    const sq = ranked.map(([e, w]) => [e, w * w]);
+    const sum = sq.reduce((a, [, w]) => a + w, 0) || 1;
+    const mix = sq.map(([e, w]) => [e, w / sum]);
+    const spread = Math.sqrt(mix.reduce((a, [, q]) => a + q * q, 0)) || 1;
+    const u = (slot, trait, e) => hashString(`look:${slot}:${trait}:${e}`) / 4294967296; // fixed per emoji, 0…1
+    const follow = Object.keys(this.look).length ? p.lookFollow : 1;
     const look = {};
     LOOK_SLOTS.forEach((slot, i) => {
-      if (i >= unlocked) return;
-      const free = ranked.filter(([e]) => !used.has(e));
-      if (!free.length) return;
-      const cur = this.look[slot];
-      const wCur = cur ? weight.get(cur.emoji) || 0 : 0;
-      let emoji = free[0][0];
-      if (cur && !used.has(cur.emoji) && wCur > 0 && wCur * p.lookStickiness >= free[0][1]) emoji = cur.emoji;
-      used.add(emoji);
-      look[slot] = {
-        emoji,
-        shape: hashString(slot + ':' + emoji) % p.lookVariants,
-        color: LOOK_COLORS[hashString('color:' + emoji) % LOOK_COLORS.length],
-      };
+      const target = {};
+      for (const trait of LOOK_TRAITS) {
+        // weighted mean, rescaled so a blend of many emojis varies as much as a single one would
+        const m = mix.reduce((a, [e, q]) => a + q * u(slot, trait, e), 0);
+        target[trait] = Math.min(1, Math.max(0, 0.5 + (m - 0.5) / spread));
+      }
+      let x = 0;
+      let y = 0;
+      for (const [e, q] of mix) {
+        const a = u(slot, 'hue', e) * 2 * Math.PI;
+        x += q * Math.cos(a);
+        y += q * Math.sin(a);
+      }
+      target.hue = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+      const th = p.lookUnlock[i];
+      target.presence = th <= 0 ? 1 : Math.min(1, Math.max(0, (score - th) / th));
+      const cur = this.look[slot] || target;
+      const o = {};
+      for (const k of [...LOOK_TRAITS, 'presence']) o[k] = +(cur[k] + follow * (target[k] - cur[k])).toFixed(3);
+      const dh = ((target.hue - cur.hue + 540) % 360) - 180; // the short way round the colour wheel
+      o.hue = Math.round((cur.hue + follow * dh + 360) % 360);
+      o.color = `hsl(${o.hue} 60% 80%)`;
+      look[slot] = o;
     });
     this.look = look;
+    this.lookMix = mix.map(([e, q]) => [e, +q.toFixed(3)]);
   }
 
   isRested(now) {

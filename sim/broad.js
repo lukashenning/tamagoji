@@ -3,6 +3,7 @@
 
 import { simulate, PERSONAS } from './lib.js';
 import { ENGINE_VERSION, DEFAULT_PARAMS } from '../src/core/params.js';
+import { lookDistance } from '../src/core/mind.js';
 
 const out = globalThis.print || console.log;
 const SEEDS = [101, 202, 303];
@@ -57,17 +58,16 @@ L.push(...phaseTable('Repetitiveness: 3-emoji sequences already seen in the same
 L.push(...phaseTable('Its own loops: its moves (not answers to ❓) that repeat a 3-emoji sequence from the last 20 emojis', 'What loop avoidance targets.', (ss) => ratio(ss, (s) => s.ownRepeats, (s) => s.ownMoves), pct));
 L.push(...phaseTable('Session length (minutes)', 'devoted = natural length (plays until it falls asleep).', (ss) => mean(ss.map((s) => s.minutes)), f1));
 L.push(...phaseTable('Complexity (end of session)', 'Σ log2(1 + different learned patterns per emoji). Random spam should stay near 0.', (ss) => mean(ss.map((s) => s.complexity)), f1));
-L.push(...phaseTable('Look changes: sessions where its appearance basis differs from the session before', '', (ss) => {
-  let changed = 0;
+L.push(...phaseTable('Look change per session: mean trait difference to the session before (0 = same, ~0.3 = unrelated)', '', (ss) => {
+  let d = 0;
   let n = 0;
   for (const s of ss) {
-    const prev = s.prevLook;
-    if (prev === undefined) continue;
+    if (s.prevLook === undefined) continue;
     n++;
-    if (prev !== s.look) changed++;
+    d += lookDistance(s.prevLook, s.look);
   }
-  return n ? changed / n : NaN;
-}, pct));
+  return n ? d / n : NaN;
+}, (x) => (Number.isFinite(x) ? x.toFixed(3) : '–')));
 L.push(...phaseTable('Seed character: share of its emoji moves', '', (ss) => ratio(ss, (s) => s.characterMoves, (s) => s.cContent), pct));
 L.push(...phaseTable('Early experiences: share of its emoji moves using emojis from days 1–2', 'From day 3 on.', (ss) => ratio(ss, (s) => s.earlyMoves, (s) => s.cContent), pct));
 
@@ -96,7 +96,7 @@ L.push('');
 
 L.push('### End state after 10 days (seed 101)');
 L.push('');
-L.push('| player | complexity | look (face · extremities · hair · object) | remembers sequences | knows emojis | strongest patterns (after 1 emoji) | longer patterns |');
+L.push('| player | complexity | look blended mostly from | remembers sequences | knows emojis | strongest patterns (after 1 emoji) | longer patterns |');
 L.push('|---|---|---|---|---|---|---|');
 for (const p of names) {
   const m = runs[p][0].mind;
@@ -104,7 +104,7 @@ for (const p of names) {
   const one = m.mem.patterns(1, 0.5, minW).slice(0, 6).map((x) => `${x.ctx.join('')}→${x.next}`).join(' ');
   let longer = 0;
   for (let Lc = 2; Lc <= m.p.contextMax; Lc++) longer += m.mem.patterns(Lc, 0.5, minW).length;
-  L.push(`| ${p} | ${m.complexity().score.toFixed(1)} | ${Object.values(m.look).map((x) => x.emoji).join(' ')} | ${m.mem.size} | ${m.vocab.size} | ${one || '–'} | ${longer} |`);
+  L.push(`| ${p} | ${m.complexity().score.toFixed(1)} | ${m.lookMix.slice(0, 4).map(([e]) => e).join(' ')} | ${m.mem.size} | ${m.vocab.size} | ${one || '–'} | ${longer} |`);
 }
 L.push('');
 

@@ -1,37 +1,66 @@
-// The creature's voice: how its melodies sound. Derived from its appearance basis (mind.look), so the
-// same slots that will later shape how it looks also shape how it sounds. A slot that isn't unlocked
-// yet keeps the default, so the voice gets richer as the creature grows more complex.
+// The creature's voice: how its melodies sound. Derived from the continuous traits of its appearance
+// basis (mind.look), so look and sound change together, and gradually: a small change in its patterns
+// moves the voice a little, a big change a lot. The synth is one recipe with continuous settings
+// (src/ui/sound.js); familiar instruments are just regions of that space (see ARCHETYPES).
 //
-//   face        shape → instrument (8 small synth instruments, see src/ui/sound.js)
-//               colour → the instrument's own tone setting (e.g. a bell's metal, an organ's stops)
-//   extremities shape → articulation (short and plucked … long and smooth)
-//   hair        shape → pitch glide at the start of each note (scoop up … drop down = "boop")
-//   object      shape → wobble (vibrato)
+//   face        shape → rich (pure tone … many overtones)   size → struck (held … struck and ringing)
+//               texture → metal (wood … bell-like)
+//   extremities shape → note length (short … long)          size → hollow (fewer even overtones: "chip")
+//   hair        shape → glide into each note (scoop up … drop down)   size → breath (airy noise)
+//   object      shape → wobble (vibrato)                    size → chorus (a second, detuned voice)
+//
+// A slot's influence fades in with its presence (it unlocks with complexity); until then it keeps the default.
 
-import { LOOK_COLORS } from './mind.js';
+export const DEFAULT_VOICE = { rich: 0.2, struck: 0.7, metal: 0.1, length: 0.8, hollow: 0, glide: 0.06, breath: 0, wobble: 0, chorus: 0 };
 
-export const INSTRUMENTS = ['chip', 'bell', 'marimba', 'pluck', 'flute', 'organ', 'brass', 'whistle'];
+// where familiar instruments sit in the space (for the panel label and the "▶ archetypes" button)
+export const ARCHETYPES = {
+  whistle: { rich: 0, struck: 0.1, metal: 0, hollow: 0, breath: 0 },
+  flute: { rich: 0.15, struck: 0.1, metal: 0, hollow: 0, breath: 0.7 },
+  organ: { rich: 0.75, struck: 0.1, metal: 0, hollow: 0.1, breath: 0 },
+  chip: { rich: 0.85, struck: 0.05, metal: 0, hollow: 1, breath: 0 },
+  marimba: { rich: 0.15, struck: 0.9, metal: 0.1, hollow: 0, breath: 0 },
+  bell: { rich: 0.2, struck: 0.85, metal: 0.9, hollow: 0, breath: 0 },
+  pluck: { rich: 0.9, struck: 0.9, metal: 0.05, hollow: 0.2, breath: 0 },
+  brass: { rich: 1, struck: 0.3, metal: 0.2, hollow: 0, breath: 0.15 },
+};
 
-export const DEFAULT_VOICE = { instrument: 'marimba', tone: 0.5, length: 0.8, glide: 0.06, wobble: 0 };
+const MAP = {
+  face: { shape: ['rich', 0, 1], size: ['struck', 0, 1], texture: ['metal', 0, 1] },
+  extremities: { shape: ['length', 0.35, 0.95], size: ['hollow', 0, 1] },
+  hair: { shape: ['glide', -0.08, 0.08], size: ['breath', 0, 0.8] },
+  object: { shape: ['wobble', 0, 0.03], size: ['chorus', 0, 1] },
+};
 
-/** @param {object} look mind.look  @param {number} variants shapes per slot (params.lookVariants) */
-export function voiceFor(look = {}, variants = 8) {
+/** @param {object} look mind.look (continuous traits per slot) */
+export function voiceFor(look = {}) {
   const v = { ...DEFAULT_VOICE };
-  const f = (slot) => (look[slot] ? look[slot].shape / Math.max(1, variants - 1) : null); // 0…1
-  if (look.face) {
-    v.instrument = INSTRUMENTS[look.face.shape % INSTRUMENTS.length];
-    v.tone = +(Math.max(0, LOOK_COLORS.indexOf(look.face.color)) / (LOOK_COLORS.length - 1)).toFixed(2);
+  for (const [slot, traits] of Object.entries(MAP)) {
+    const x = look[slot];
+    if (!x) continue;
+    const presence = x.presence ?? 1;
+    for (const [trait, [key, lo, hi]] of Object.entries(traits)) {
+      const raw = lo + (hi - lo) * x[trait];
+      v[key] = +(v[key] + presence * (raw - v[key])).toFixed(3);
+    }
   }
-  if (f('extremities') !== null) v.length = +(0.35 + f('extremities') * 0.6).toFixed(2); // share of a step
-  if (f('hair') !== null) v.glide = +(-0.08 + f('hair') * 0.16).toFixed(3); // −8% (scoop up) … +8% (drop)
-  if (f('object') !== null) v.wobble = +(f('object') * 0.03).toFixed(3); // vibrato depth, 0–3%
   return v;
+}
+
+/** The archetype the voice is closest to. */
+export function nearestArchetype(v) {
+  let best = null;
+  let bestD = Infinity;
+  for (const [name, a] of Object.entries(ARCHETYPES)) {
+    const d = Object.keys(a).reduce((s, k) => s + (v[k] - a[k]) ** 2, 0);
+    if (d < bestD) [best, bestD] = [name, d];
+  }
+  return best;
 }
 
 /** Short description for the test panel. */
 export function voiceText(v) {
-  const len = v.length < 0.55 ? 'short' : v.length < 0.8 ? 'medium' : 'long';
+  const n = (x) => x.toFixed(2);
   const glide = Math.abs(v.glide) < 0.02 ? 'no glide' : v.glide > 0 ? `drops ${Math.round(v.glide * 100)}%` : `scoops ${Math.round(-v.glide * 100)}%`;
-  const wob = v.wobble ? `wobble ${(v.wobble * 100).toFixed(1)}%` : 'no wobble';
-  return `${v.instrument} (tone ${v.tone}) · ${len} notes (${v.length}) · ${glide} · ${wob}`;
+  return `closest to ${nearestArchetype(v)} · rich ${n(v.rich)} · struck ${n(v.struck)} · metal ${n(v.metal)} · hollow ${n(v.hollow)} · breath ${n(v.breath)} · chorus ${n(v.chorus)} · length ${n(v.length)} · ${glide} · wobble ${(v.wobble * 100).toFixed(1)}%`;
 }
