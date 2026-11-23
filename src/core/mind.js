@@ -63,6 +63,7 @@ export class Mind {
     this.question = false; // it asked ❓ and waits for your answer
     this.chain = []; // its emojis since your last emoji: [{ ctx, tok }] (what ✅ / ❌ refer to)
     this.rejected = null; // after ❌: emojis to avoid in its retry
+    this.notThat = null; // after ❌: { ctx: what came before what you rejected, rejected } until ✅ or your next emoji
     this.asked = false; // you sent ❓: it answers with one best guess
     this.lastEval = null; // how your last emoji compared to its expectation
     this.lastCreatureAsk = false;
@@ -141,6 +142,7 @@ export class Mind {
     this.question = false;
     this.chain = [];
     this.rejected = null;
+    this.notThat = null;
     this.askStreak = 0;
     this.input(t, 1);
   }
@@ -151,6 +153,16 @@ export class Mind {
     if (tok === YES) {
       // reinforce its reaction: the link to the emoji it answered and to the sequence it answered
       for (const c of chain) this.mem.reinforce(c.ctx, c.tok, 1, this.p.yesWeight);
+      // "not that, this": ✅ right after a ❌ also links what it said since the ❌ to what came
+      // *before* the rejected emoji(s), as if the rejected part had never been said. Used once.
+      if (this.notThat) {
+        const ctx = [...this.notThat.ctx];
+        for (const c of chain) {
+          this.mem.reinforce(ctx.slice(-this.p.contextMax), c.tok, 1, this.p.notThatWeight);
+          ctx.push(c.tok);
+        }
+        this.notThat = null;
+      }
       this.stats.yes++;
     } else if (tok === NO) {
       // weaken the same links clearly (halve them), and let it try something else
@@ -162,7 +174,12 @@ export class Mind {
     if (tok !== ASK) this.chain = []; // ❓ lets it carry on, so a later ✅ / ❌ still covers what it said
     this.question = false;
     this.input(t, 0.5);
-    if (tok === NO && chain.length) this.rejected = new Set(chain.map((c) => c.tok));
+    if (tok === NO && chain.length) {
+      // remember what the rejected part answered (kept across several ❌ in a row: "not that either")
+      const prev = this.notThat;
+      this.notThat = { ctx: prev ? prev.ctx : chain[0].ctx, rejected: new Set([...(prev ? prev.rejected : []), ...chain.map((c) => c.tok)]) };
+      this.rejected = this.notThat.rejected;
+    }
     if (tok === ASK) this.asked = true; // "what comes next?": it answers with one best guess
   }
 
@@ -253,10 +270,15 @@ export class Mind {
     if (e < p.sleepyBelow && rng() < ((p.sleepyBelow - e) / p.sleepyBelow) * 0.35) return { tok: SLEEP, why: { mode: 'nods off (sleepy)' } };
 
     // 3. you said ❌: try again with something else
+    // It answers again what the rejected part answered, less tied to its most likely idea
+    // (flatter choice), and sometimes with a surprise.
     if (this.rejected) {
-      const tok = this.sampleFrom(pred.dist, p.temperature, rng, this.rejected);
-      if (tok && (pred.dist.get(tok) || 0) > 0.02) return { tok, m: 'retry', why: { ...base, mode: 'retry after ❌', top3: this.top3(pred, this.rejected) } };
-      return { tok: this.paletteEmoji(rng, now), m: 'retry', why: { ...base, mode: 'retry after ❌: tries something new' } };
+      const alt = this.notThat ? this.mem.predict(this.notThat.ctx) : pred;
+      const why = { ...base, pred: alt };
+      if (rng() < p.retrySurprise) return { tok: this.paletteEmoji(rng, now), m: 'retry', why: { ...why, mode: 'retry after ❌: a surprise' } };
+      const tok = this.sampleFrom(alt.dist, p.retryTemperature, rng, this.rejected);
+      if (tok && (alt.dist.get(tok) || 0) > 0.02) return { tok, m: 'retry', why: { ...why, mode: 'retry after ❌', top3: this.top3(alt, this.rejected) } };
+      return { tok: this.paletteEmoji(rng, now), m: 'retry', why: { ...why, mode: 'retry after ❌: tries something new' } };
     }
 
     // 4. reacting to what you did
@@ -416,6 +438,7 @@ export class Mind {
     this.question = false;
     this.asked = false;
     this.rejected = null;
+    this.notThat = null;
     this.chain = [];
     this.lastEval = null;
     this.sleepCount++;

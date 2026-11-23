@@ -68,3 +68,4 @@
 | D61 | 2026-11-23 | Sleeping: no "zzzZ"; each dreamed emoji rises small from its head in a wavy zig-zag (9 s), following the one before. | accepted | user |
 | D62 | 2026-11-23 | Dream animation: instead of a zig-zag, each emoji drifts to the right on a randomized path while rising and growing. Rising speed follows the time between dream emojis (rise ≈ 3 gaps, 1.5–30 s), for all emojis in the air at once. | accepted | user |
 | D63 | 2026-11-23 | Dream animation: no drift, the emojis rise straight up (growing, pace-dependent speed as in D62). | accepted | user |
+| D64 | 2026-11-23 | After ❌ its retry answers what the rejected part answered (the context before it), with a flatter choice (retryTemperature 1.6) and 30% surprise (retrySurprise). "Not that, this": the first ✅ after that also links what it said since the ❌ to the context before the rejected part (+4, notThatWeight); then it's used up. Engine 0.12. | accepted | user |

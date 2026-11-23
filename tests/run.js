@@ -119,6 +119,42 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
   check('❌ → retry avoids the rejected emoji', !retries.has('🌙') && m.decide(mulberry32(1)).m === 'retry', [...retries].join(''));
 }
 
+// 3b. after ❌: a more surprising retry, answering what the rejected emoji answered
+{
+  const setup = () => {
+    const f = fresh(31);
+    for (let i = 0; i < 6; i++) demo(f.o, ['🐶', '🦴', '🍕']);
+    for (let i = 0; i < 3; i++) demo(f.o, ['🐶', '🎾', '🍕']);
+    for (let i = 0; i < 2; i++) demo(f.o, ['🐶', '🌞', '🍕']);
+    demo(f.o, ['🎈']); // something new before, so it goes by "what follows 🐶"
+    f.o('C', WAIT);
+    f.o('P', '🐶');
+    f.o('C', '🦴');
+    f.o('P', NO);
+    return f;
+  };
+  const f = setup();
+  const n = { surprise: 0, '🎾': 0, '🌞': 0, '🦴': 0 };
+  for (let i = 0; i < 400; i++) {
+    const d = f.m.decide(mulberry32(500 + i));
+    if (/surprise|new/.test(d.why.mode)) n.surprise++;
+    else if (d.tok in n) n[d.tok]++;
+  }
+  const ok = n['🦴'] === 0 && n.surprise > 80 && n.surprise < 160 && n['🌞'] > 40 && n['🎾'] > n['🌞'];
+  check('❌ → retry: other answers to 🐶, flatter, sometimes a surprise', ok, `🎾 ${pct(n['🎾'] / 400)} · 🌞 ${pct(n['🌞'] / 400)} · surprise ${pct(n.surprise / 400)} · 🦴 ${n['🦴']}`);
+
+  // "not that, this": ✅ right after ❌ links the new answer to what came before the rejected one
+  const g = setup();
+  const before = weightOf(g.m, ['🐶'], '🌞');
+  g.o('C', '🌞');
+  g.o('P', YES);
+  const after = weightOf(g.m, ['🐶'], '🌞');
+  g.o('C', '🍕');
+  g.o('P', YES); // a later ✅: the special effect is used up
+  const later = weightOf(g.m, ['🐶'], '🌞');
+  check('"not that, this": ✅ after ❌ links 🐶→🌞 (once)', after >= before + P.notThatWeight - 0.01 && Math.abs(later - after) < 0.01, `🐶→🌞 ${before.toFixed(2)} → ${after.toFixed(2)} → ${later.toFixed(2)}`);
+}
+
 // 4. ❓: one best guess, then it waits
 {
   const { m, o } = fresh();

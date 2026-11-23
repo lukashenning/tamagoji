@@ -33,7 +33,7 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
 | sign | from you | from it |
 |---|---|---|
 | ✅ | reinforce what it just said | it confirms: you did what it confidently expected |
-| ❌ | counter-reinforce, it retries | it objects: you broke a confident expectation |
+| ❌ | counter-reinforce, it retries (a more surprising answer). **"Not that, this"**: a ✅ right after that retry also links the new answer to what came *before* the rejected emoji *(0.12)* | it objects: you broke a confident expectation |
 | ❓ | "your turn / what comes next?" (also: passing): **one** best guess, then it waits for you. Pressing ❓ again and again draws out a learned chain step by step, so you can ✅ longer chains *(0.11)*. Below 25% certainty it asks back ❓, and **several ❓ in a row** there make a surprise likelier: +35% per extra ❓ (2nd ≈ 35%, 3rd ≈ 70%, max 85%) | "I don't know / I'm listening" when it has no pattern. Your next emoji counts ×3 |
 
 ❤️ and 💬 are ordinary emojis now. *(0.8: 💬 (wait/pass) merged into ❓; old saves are converted.)*
@@ -44,7 +44,14 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
    that pattern, however many ❓ in a row (D59). Only if it doesn't know: ❓ back, or with several ❓
    in a row a surprise.
 2. Out of energy / sleepy? → sleeps.
-3. You said ❌? → something other than what you rejected.
+3. You said ❌? → it answers again what the rejected emoji answered (the sequence before it), never
+   the rejected emoji, with a flatter choice (retryTemperature 1.6, so less tied to its most likely
+   idea) and 30% a surprise from the hourly set (D64). Same situation, old vs new: 🎾 61% · 🌞 39%
+   → 🎾 39% · 🌞 30% · surprise 32%.
+   - **"Not that, this":** if you then ✅, what it said since the ❌ is also linked (+4) to what
+     came before the rejected part, as if that had never been said. So after 🐶 🦴 ❌ 🌞 ✅ it
+     learns 🐶 → 🌞. Used once: the next ✅ is an ordinary ✅. Several ❌ in a row keep the same
+     "before" ("not that either"). Your next ordinary emoji or sleep ends it.
 4. Sometimes reacts with ✅ / ❌ (see above).
 6. Otherwise **next-token prediction**, with:
    - **chaos** (temperature 0.8) and a certainty cap of 85%, so it's never fully predictable

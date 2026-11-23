@@ -1,6 +1,6 @@
 // All tunable numbers in one place. See docs/07-simple-core.md.
 
-export const ENGINE_VERSION = '0.11.0';
+export const ENGINE_VERSION = '0.12.0';
 
 export const DEFAULT_PARAMS = {
   // pattern memory
@@ -14,6 +14,9 @@ export const DEFAULT_PARAMS = {
   yesWeight: 2, // ✅: those links +2
   noFactor: 0.5, // ❌: those links × 0.5 …
   noWeight: 0.5, // … and −0.5 (so one ❌ clearly lowers the chance, even for a strong habit)
+  retryTemperature: 1.6, // its answer after ❌: a flatter choice, less tied to its most likely idea
+  retrySurprise: 0.3, // … and 30% a surprise from the hourly keyboard set
+  notThatWeight: 4, // ✅ right after ❌: what it said since the ❌ is linked (+4) to what came before the rejected part
 
   // behaviour
   temperature: 0.8, // chaos
