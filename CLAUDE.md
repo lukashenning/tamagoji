@@ -6,7 +6,7 @@ identity (behaviour, later its appearance) should follow from its **token histor
 
 ## Current phase
 
-**Prototype 0.12 on the simple core of 0.6** (2026-11-23), described in `docs/07-simple-core.md`. The user found
+**Prototype 0.13 on the simple core of 0.6** (2026-11-23), described in `docs/07-simple-core.md`. The user found
 v0.5 too complex and not working well, so it was stripped down:
 - one pattern memory over the whole history, used for next-token prediction
 - ✅ / ❌ (re)inforce the emoji, its link to the previous emoji, and its link to the recent sequence
@@ -24,6 +24,8 @@ Melodies: 500 ms, creature only, diatonic with keys per emoji category, fixed �
 In 0.11: gradual look (blended traits, half-way per sleep) and a continuous synth voice driven by it
 (D58, D60); ❓ draws out learned chains (D59); dreams rise straight up, paced by the dreams (D61–D63).
 In 0.12: after ❌ a more surprising retry, and ✅ after it teaches "not that, this" (D64).
+In 0.13: ❌ takes the rejected emoji back out of the sequence; rankings use pattern strength, so
+new emojis can gradually overtake old ones (D65).
 Next: the user plays it.
 
 **Keep it simple.** The user strongly prefers a small, transparent system. Don't add mechanisms

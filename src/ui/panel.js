@@ -181,7 +181,7 @@ export function buildPanel(root, h) {
 
     // ── complexity & appearance basis ──
     const cx = m.complexity();
-    const topSigns = [...cx.variety].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([e, n]) => pill(`${e} ${n}`)).join(' ');
+    const topSigns = [...cx.strength].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([e, x]) => pill(`${e} ${num(x, 1)}`)).join(' ');
     const look = LOOK_SLOTS.map((slot, i) => {
       const x = m.look[slot];
       const lock = p.lookUnlock[i];
@@ -195,7 +195,7 @@ export function buildPanel(root, h) {
     })();
     out.push(`<section><h3>complexity & appearance basis</h3>
       <div>complexity <b>${num(cx.score, 1)}</b> · ${cx.signs} emojis in learned patterns <span class="dim">(Σ log2(1 + different patterns per emoji); random spam adds nothing)</span></div>
-      <div>most varied: ${topSigns || '–'}</div>
+      <div>most varied: ${topSigns || '–'} <span class="dim">(summed pattern strength: grows with ✅, shrinks with ❌)</span></div>
       <h4>look <span class="dim">(a blend of its strongest pattern emojis; after each sleep it moves ${Math.round(p.lookFollow * 100)}% of the way to the new blend)</span></h4>
       <div class="dim">blended from: ${m.lookMix.slice(0, 8).map(([e, q]) => `${e} ${Math.round(q * 100)}%`).join(' · ') || '–'}</div>
       <table class="rules">${look.join('')}</table>

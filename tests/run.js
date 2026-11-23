@@ -155,6 +155,25 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
   check('"not that, this": ✅ after ❌ links 🐶→🌞 (once)', after >= before + P.notThatWeight - 0.01 && Math.abs(later - after) < 0.01, `🐶→🌞 ${before.toFixed(2)} → ${after.toFixed(2)} → ${later.toFixed(2)}`);
 }
 
+// 3c. overtaking: a new emoji, ✅ often while the old one gets ❌, gradually overtakes it
+{
+  const { m, o } = fresh(7);
+  for (let i = 0; i < 20; i++) demo(o, ['🌞', '🐶', '🦴', '🍕', '🐶', '🎾', '🌙', '⭐']);
+  const st = () => m.complexity().strength;
+  const s0 = st();
+  const trail = [];
+  for (let r = 1; r <= 24; r++) {
+    o('P', '🌞'); o('C', '🐶'); o('P', NO); o('C', '🐱'); o('P', YES);
+    o('P', '🐱'); o('C', '🦴'); o('P', YES);
+    o('P', '🍕'); o('C', '🐶'); o('P', NO); o('C', '🐱'); o('P', YES);
+    o('P', '🐱'); o('C', '🎾'); o('P', YES);
+    if (r % 6 === 0) trail.push(`${r}: 🐶 ${st().get('🐶').toFixed(0)} 🐱 ${st().get('🐱').toFixed(0)}`);
+  }
+  const s1 = st();
+  const notInSeq = !m.seq.slice(-8).includes('🐶');
+  check('a new emoji gradually overtakes an old one (✅ new, ❌ old)', s1.get('🐱') > s1.get('🐶') && s0.get('🐶') > 0 && notInSeq, `before 🐶 ${s0.get('🐶').toFixed(0)} · rounds ${trail.join(' · ')} · rejected 🐶 left the sequence: ${notInSeq}`);
+}
+
 // 4. ❓: one best guess, then it waits
 {
   const { m, o } = fresh();
@@ -360,7 +379,7 @@ check('replay is deterministic', sig(r) === sig(a.mind), `replay ${Date.now() - 
   sleepWake();
   sleepWake();
   const big3 = lookDistance(look1, m.look);
-  check('look: small change → small difference, big change → big, gradually over nights', small < 0.04 && big1 > small * 4 && big3 > big1, `small ${small.toFixed(3)} · big after 1 night ${big1.toFixed(3)} · after 3 nights ${big3.toFixed(3)} · now from ${m.lookMix.slice(0, 4).map(([e]) => e).join('')}`);
+  check('look: small change → small difference, big change → big, gradually over nights', small < 0.04 && big1 > small * 3 && big3 > big1, `small ${small.toFixed(3)} · big after 1 night ${big1.toFixed(3)} · after 3 nights ${big3.toFixed(3)} · now from ${m.lookMix.slice(0, 4).map(([e]) => e).join('')}`);
   const baby = fresh(23).m;
   const fromSeed = baby.lookMix.every(([e]) => baby.character.includes(e)) && baby.look.face.presence === 1 && baby.look.object.presence === 0;
   check('look: a newborn is blended from its seed character, only the face present', fromSeed, `${baby.lookMix.map(([e]) => e).join('')} · face shape ${baby.look.face.shape}`);

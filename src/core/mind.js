@@ -63,7 +63,7 @@ export class Mind {
     this.question = false; // it asked ❓ and waits for your answer
     this.chain = []; // its emojis since your last emoji: [{ ctx, tok }] (what ✅ / ❌ refer to)
     this.rejected = null; // after ❌: emojis to avoid in its retry
-    this.notThat = null; // after ❌: { ctx: what came before what you rejected, rejected } until ✅ or your next emoji
+    this.notThat = null; // after ❌: { rejected } until ✅ or your next emoji ("not that, this")
     this.asked = false; // you sent ❓: it answers with one best guess
     this.lastEval = null; // how your last emoji compared to its expectation
     this.lastCreatureAsk = false;
@@ -152,17 +152,11 @@ export class Mind {
     const chain = this.chain;
     if (tok === YES) {
       // reinforce its reaction: the link to the emoji it answered and to the sequence it answered
-      for (const c of chain) this.mem.reinforce(c.ctx, c.tok, 1, this.p.yesWeight);
-      // "not that, this": ✅ right after a ❌ also links what it said since the ❌ to what came
-      // *before* the rejected emoji(s), as if the rejected part had never been said. Used once.
-      if (this.notThat) {
-        const ctx = [...this.notThat.ctx];
-        for (const c of chain) {
-          this.mem.reinforce(ctx.slice(-this.p.contextMax), c.tok, 1, this.p.notThatWeight);
-          ctx.push(c.tok);
-        }
-        this.notThat = null;
-      }
+      // "not that, this": the first ✅ after a ❌ counts extra (notThatWeight). Since the ❌ took the
+      // rejected part back, these links already go to what came before it.
+      const w = this.notThat ? this.p.notThatWeight : this.p.yesWeight;
+      for (const c of chain) this.mem.reinforce(c.ctx, c.tok, 1, w);
+      this.notThat = null;
       this.stats.yes++;
     } else if (tok === NO) {
       // weaken the same links clearly (halve them), and let it try something else
@@ -175,9 +169,12 @@ export class Mind {
     this.question = false;
     this.input(t, 0.5);
     if (tok === NO && chain.length) {
-      // remember what the rejected part answered (kept across several ❌ in a row: "not that either")
-      const prev = this.notThat;
-      this.notThat = { ctx: prev ? prev.ctx : chain[0].ctx, rejected: new Set([...(prev ? prev.rejected : []), ...chain.map((c) => c.tok)]) };
+      // ❌ takes the rejected emoji(s) back: they leave the conversation's sequence, as if never said,
+      // so they don't become the context of what follows (and don't gain patterns from it)
+      this.seq.splice(-chain.length);
+      this.seqWho.splice(-chain.length);
+      const prev = this.notThat; // several ❌ in a row: "not that either"
+      this.notThat = { rejected: new Set([...(prev ? prev.rejected : []), ...chain.map((c) => c.tok)]) };
       this.rejected = this.notThat.rejected;
     }
     if (tok === ASK) this.asked = true; // "what comes next?": it answers with one best guess
@@ -270,11 +267,11 @@ export class Mind {
     if (e < p.sleepyBelow && rng() < ((p.sleepyBelow - e) / p.sleepyBelow) * 0.35) return { tok: SLEEP, why: { mode: 'nods off (sleepy)' } };
 
     // 3. you said ❌: try again with something else
-    // It answers again what the rejected part answered, less tied to its most likely idea
-    // (flatter choice), and sometimes with a surprise.
+    // The rejected part was taken back, so it answers again what that answered, less tied to its
+    // most likely idea (flatter choice), and sometimes with a surprise.
     if (this.rejected) {
-      const alt = this.notThat ? this.mem.predict(this.notThat.ctx) : pred;
-      const why = { ...base, pred: alt };
+      const alt = pred;
+      const why = base;
       if (rng() < p.retrySurprise) return { tok: this.paletteEmoji(rng, now), m: 'retry', why: { ...why, mode: 'retry after ❌: a surprise' } };
       const tok = this.sampleFrom(alt.dist, p.retryTemperature, rng, this.rejected);
       if (tok && (alt.dist.get(tok) || 0) > 0.02) return { tok, m: 'retry', why: { ...why, mode: 'retry after ❌', top3: this.top3(alt, this.rejected) } };
@@ -487,18 +484,20 @@ export class Mind {
    * for both emojis. A longer pattern counts only where the longer context changes the answer.
    * Score = Σ over emojis of log2(1 + number of different patterns it's part of). Random spam forms
    * no learned patterns, so it adds nothing.
-   * Returns { score, signs, variety: emoji -> count, weight: emoji -> summed pattern weight }.
+   * Returns { score, signs, variety: emoji -> count, strength: emoji -> summed pattern strength }.
+   * Strength of a pattern = log2(1 + w / strengthScale): it grows with ✅ and shrinks with ❌, but each
+   * doubling of the weight adds the same, so long-established patterns can't run away and newer,
+   * often reinforced ones can catch up.
+   * "Most varied" and the look's blend are ranked by strength.
    */
   complexity() {
     if (this._cx && this._cx.version === this.mem.version) return this._cx.value;
     const p = this.p;
     const minW = p.repsToLearn * 0.75;
-    const variety = new Map();
-    const weight = new Map();
+    const variety = new Map(); // emoji -> Map(pattern key -> strength)
     const note = (e, key, w) => {
-      if (!variety.has(e)) variety.set(e, new Set());
-      variety.get(e).add(key);
-      weight.set(e, (weight.get(e) || 0) + w);
+      if (!variety.has(e)) variety.set(e, new Map());
+      variety.get(e).set(key, Math.log2(1 + w / p.strengthScale));
     };
     const minN = Math.max(2, Math.round(p.repsToLearn)); // it must really have happened repeatedly
     for (const x of this.mem.learned(1, 0.2, minW, minN)) {
@@ -514,11 +513,13 @@ export class Mind {
     }
     let score = 0;
     const counts = new Map();
-    for (const [e, set] of variety) {
-      counts.set(e, set.size);
-      score += Math.log2(1 + set.size);
+    const strength = new Map();
+    for (const [e, pats] of variety) {
+      counts.set(e, pats.size);
+      strength.set(e, [...pats.values()].reduce((a, b) => a + b, 0));
+      score += Math.log2(1 + pats.size);
     }
-    const value = { score, signs: variety.size, variety: counts, weight };
+    const value = { score, signs: variety.size, variety: counts, strength };
     this._cx = { version: this.mem.version, value };
     return value;
   }
@@ -534,8 +535,8 @@ export class Mind {
    */
   updateLook() {
     const p = this.p;
-    const { weight, score } = this.complexity();
-    let ranked = [...weight].sort((a, b) => b[1] - a[1]).slice(0, p.lookTop);
+    const { strength, score } = this.complexity();
+    let ranked = [...strength].sort((a, b) => b[1] - a[1]).slice(0, p.lookTop);
     if (!ranked.length) ranked = this.character.map((e) => [e, 1]);
     // sharpened shares: the strongest emojis dominate, the rest still count a little
     const sq = ranked.map(([e, w]) => [e, w * w]);

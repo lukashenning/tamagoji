@@ -33,7 +33,7 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
 | sign | from you | from it |
 |---|---|---|
 | ✅ | reinforce what it just said | it confirms: you did what it confidently expected |
-| ❌ | counter-reinforce, it retries (a more surprising answer). **"Not that, this"**: a ✅ right after that retry also links the new answer to what came *before* the rejected emoji *(0.12)* | it objects: you broke a confident expectation |
+| ❌ | counter-reinforce and take it back; it retries (a more surprising answer). **"Not that, this"**: a ✅ right after that retry links the new answer extra strongly to what came *before* the rejected emoji *(0.12, 0.13)* | it objects: you broke a confident expectation |
 | ❓ | "your turn / what comes next?" (also: passing): **one** best guess, then it waits for you. Pressing ❓ again and again draws out a learned chain step by step, so you can ✅ longer chains *(0.11)*. Below 25% certainty it asks back ❓, and **several ❓ in a row** there make a surprise likelier: +35% per extra ❓ (2nd ≈ 35%, 3rd ≈ 70%, max 85%) | "I don't know / I'm listening" when it has no pattern. Your next emoji counts ×3 |
 
 ❤️ and 💬 are ordinary emojis now. *(0.8: 💬 (wait/pass) merged into ❓; old saves are converted.)*
@@ -48,10 +48,12 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
    the rejected emoji, with a flatter choice (retryTemperature 1.6, so less tied to its most likely
    idea) and 30% a surprise from the hourly set (D64). Same situation, old vs new: 🎾 61% · 🌞 39%
    → 🎾 39% · 🌞 30% · surprise 32%.
-   - **"Not that, this":** if you then ✅, what it said since the ❌ is also linked (+4) to what
-     came before the rejected part, as if that had never been said. So after 🐶 🦴 ❌ 🌞 ✅ it
-     learns 🐶 → 🌞. Used once: the next ✅ is an ordinary ✅. Several ❌ in a row keep the same
-     "before" ("not that either"). Your next ordinary emoji or sleep ends it.
+   - **❌ takes it back** (0.13, D65): the rejected emoji(s) leave the conversation's sequence, as
+     if never said. So they don't become the context of what follows and gain no patterns from it.
+   - **"Not that, this":** if you then ✅, what it said since the ❌ is linked to what came before
+     the rejected part with +4 instead of +2. So after 🐶 🦴 ❌ 🌞 ✅ it learns 🐶 → 🌞. Used once:
+     the next ✅ is an ordinary ✅. Several ❌ in a row work the same ("not that either"). Your next
+     ordinary emoji or sleep ends it.
 4. Sometimes reacts with ✅ / ❌ (see above).
 6. Otherwise **next-token prediction**, with:
    - **chaos** (temperature 0.8) and a certainty cap of 85%, so it's never fully predictable
@@ -144,6 +146,12 @@ conversations; those had mostly faded from its memory anyway. The panel shows th
 - A learned pair counts for both emojis: after a comes b, ≥ 20% of what followed, faded weight
   ≥ 0.75 × reps to learn, and it **really happened ≥ 3×** or got ✅.
 - A longer pattern counts only where the longer context changes the answer.
+
+**Pattern strength** (0.13, D65): each learned pattern has a strength log₂(1 + weight / 4)
+(weight 4 → 1, 12 → 2, 28 → 3, 60 → 4). "Most varied" and the look's blend rank emojis by their
+summed strength. It grows with ✅ and shrinks with ❌, but every doubling adds the same, so a long-
+established emoji can't run away: a new one that gets ✅ often while the old one gets ❌ overtakes
+it gradually (test: 🐶 58 / 🐱 41 after 6 correction rounds, 58 / 61 after 12, 57 / 84 after 24).
 
 Score = Σ log₂(1 + number of patterns per emoji). The "really happened" rule makes spam worthless: one
 heavy event, like an answer to its ❓, doesn't count as a learned pattern. Test results:
