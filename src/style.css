@@ -97,7 +97,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 600 18px/1 ui-sans-serif, system-ui;
   color: var(--accent);
 }
-/* dreams: little emojis rise from its head in a wavy zig-zag, one after another */
+/* dreams: little emojis rise from its head, drifting right (moved by main.js) */
 .creature-wrap { position: relative; }
 .dreams { position: absolute; left: 50%; top: 6px; width: 0; height: 0; pointer-events: none; }
 .dream-emoji {
@@ -106,22 +106,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: -13px;
   font: 26px/1 var(--emoji);
   opacity: 0;
-  animation: dream-rise 9s linear forwards;
-}
-.dream-emoji .wave { display: inline-block; animation: dream-wave 9s forwards; }
-@keyframes dream-rise {
-  0% { transform: translateY(0) scale(0.7); opacity: 0; }
-  10% { opacity: 0.75; }
-  70% { opacity: 0.55; }
-  100% { transform: translateY(-200px) scale(1.9); opacity: 0; }
-}
-@keyframes dream-wave {
-  0% { transform: translateX(0); animation-timing-function: ease-out; }
-  12.5% { transform: translateX(24px); animation-timing-function: ease-in-out; }
-  37.5% { transform: translateX(-24px); animation-timing-function: ease-in-out; }
-  62.5% { transform: translateX(24px); animation-timing-function: ease-in-out; }
-  87.5% { transform: translateX(-24px); animation-timing-function: ease-in; }
-  100% { transform: translateX(0); }
+  will-change: transform, opacity;
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
 .you {

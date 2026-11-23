@@ -151,23 +151,73 @@ function lastEntry(who) {
   return null;
 }
 
-// dreaming: each new dream emoji rises from its head in a wavy zig-zag, following the one before
+// dreaming: each new dream emoji rises from its head, drifting to the right on its own randomized path.
+// Rising speed follows the pace of the dreams: the shorter the time between dream emojis, the faster
+// all of them rise (and they slow down again when the dreams come slower), so about 3 are visible.
 let dreamSpawned = -1;
 let lastSpawn = 0;
+let dreamGap = 3000; // smoothed real ms between dream emojis
+const flying = []; // { node, start (progress clock at spawn), path }
+const RISE_PX = 200;
+
+// a shared "progress clock": how far (in whole rises) everything has moved. Its speed follows the
+// dream pace, so all dream emojis speed up or slow down together, at any frame rate.
+let progress = 0;
+let progressAt = performance.now();
+function advance() {
+  const now = performance.now();
+  const gap = Math.max(dreamGap, Date.now() - lastSpawn); // no new dream for a while → slower
+  const riseMs = Math.min(30000, Math.max(1500, 3 * gap)); // about 3 visible at a time
+  progress += Math.min(3000, now - progressAt) / riseMs;
+  progressAt = now;
+}
+
 function showDream(m) {
   if (s.dreamShown < dreamSpawned) dreamSpawned = -1; // a new sleep
   if (s.dreamShown <= dreamSpawned || Date.now() - lastSpawn < 900) return; // catching up: not too dense
   const tok = m.sleep.dream[s.dreamShown];
   dreamSpawned = s.dreamShown;
   if (!tok) return;
-  lastSpawn = Date.now();
-  const d = document.createElement('span');
-  d.className = 'dream-emoji';
-  d.innerHTML = `<span class="wave"></span>`;
-  d.firstChild.textContent = tok;
-  d.addEventListener('animationend', (e) => e.target === d && d.remove());
-  el.dreams.append(d);
+  advance();
+  const t = Date.now();
+  if (lastSpawn && t - lastSpawn < 60000) dreamGap = 0.6 * dreamGap + 0.4 * (t - lastSpawn);
+  lastSpawn = t;
+  const node = document.createElement('span');
+  node.className = 'dream-emoji';
+  node.textContent = tok;
+  el.dreams.append(node);
+  // a randomized drift to the right: 4 points on the way up, each a bit further right, with some jitter
+  const drift = 25 + Math.random() * 45;
+  const path = [0, 1, 2, 3].map((k) => (drift * k) / 3 + (k ? (Math.random() - 0.5) * 22 : 0));
+  flying.push({ node, start: progress, path });
 }
+
+function clearDreams() {
+  flying.length = 0;
+  el.dreams.replaceChildren();
+}
+
+function animateDreams() {
+  advance();
+  for (let i = flying.length - 1; i >= 0; i--) {
+    const f = flying[i];
+    const p = progress - f.start; // 0…1 of the way up
+    if (p >= 1) {
+      f.node.remove();
+      flying.splice(i, 1);
+      continue;
+    }
+    // smooth (cosine) interpolation between the path points
+    const seg = Math.min(2, Math.floor(p * 3));
+    const u = p * 3 - seg;
+    const w = (1 - Math.cos(Math.PI * u)) / 2;
+    const x = f.path[seg] + (f.path[seg + 1] - f.path[seg]) * w;
+    f.node.style.transform = `translate(${x.toFixed(1)}px, ${(-RISE_PX * p).toFixed(1)}px) scale(${(0.7 + 1.2 * p).toFixed(3)})`;
+    f.node.style.opacity = String(Math.min(1, p / 0.1) * (p > 0.7 ? (1 - p) / 0.3 : 1) * 0.75);
+  }
+  requestAnimationFrame(animateDreams);
+}
+requestAnimationFrame(animateDreams);
 
 function render() {
   const m = s.mind;
@@ -182,7 +232,7 @@ function render() {
     showDream(m);
     el.you.textContent = '';
   } else {
-    if (el.dreams.firstChild) el.dreams.replaceChildren(); // woke up: dreams vanish
+    if (flying.length) clearDreams(); // woke up: dreams vanish
     const c = lastEntry('C');
     const p = lastEntry('P');
     el.bubble.className = 'bubble' + (m.turn === 'C' ? ' faded' : '') + (c ? '' : ' empty');
