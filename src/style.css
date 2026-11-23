@@ -117,10 +117,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 @keyframes dream-wave {
   0% { transform: translateX(0); animation-timing-function: ease-out; }
-  12.5% { transform: translateX(36px); animation-timing-function: ease-in-out; }
-  37.5% { transform: translateX(-36px); animation-timing-function: ease-in-out; }
-  62.5% { transform: translateX(36px); animation-timing-function: ease-in-out; }
-  87.5% { transform: translateX(-36px); animation-timing-function: ease-in; }
+  12.5% { transform: translateX(24px); animation-timing-function: ease-in-out; }
+  37.5% { transform: translateX(-24px); animation-timing-function: ease-in-out; }
+  62.5% { transform: translateX(24px); animation-timing-function: ease-in-out; }
+  87.5% { transform: translateX(-24px); animation-timing-function: ease-in; }
   100% { transform: translateX(0); }
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
