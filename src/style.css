@@ -110,17 +110,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .dream-emoji .wave { display: inline-block; animation: dream-wave 9s forwards; }
 @keyframes dream-rise {
-  0% { transform: translateY(0) scale(0.35); opacity: 0; }
+  0% { transform: translateY(0) scale(0.7); opacity: 0; }
   10% { opacity: 0.75; }
   70% { opacity: 0.55; }
-  100% { transform: translateY(-190px) scale(0.95); opacity: 0; }
+  100% { transform: translateY(-200px) scale(1.9); opacity: 0; }
 }
 @keyframes dream-wave {
   0% { transform: translateX(0); animation-timing-function: ease-out; }
-  12.5% { transform: translateX(16px); animation-timing-function: ease-in-out; }
-  37.5% { transform: translateX(-16px); animation-timing-function: ease-in-out; }
-  62.5% { transform: translateX(16px); animation-timing-function: ease-in-out; }
-  87.5% { transform: translateX(-16px); animation-timing-function: ease-in; }
+  12.5% { transform: translateX(36px); animation-timing-function: ease-in-out; }
+  37.5% { transform: translateX(-36px); animation-timing-function: ease-in-out; }
+  62.5% { transform: translateX(36px); animation-timing-function: ease-in-out; }
+  87.5% { transform: translateX(-36px); animation-timing-function: ease-in; }
   100% { transform: translateX(0); }
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
