@@ -67,3 +67,4 @@
 | D60 | 2026-11-23 | Voice is one continuous synth (rich, struck, metal, hollow, breath, chorus, length, glide, wobble) driven by the look traits, instead of 8 discrete instruments; the instruments remain as archetypes (panel label, ▶ archetypes). | accepted | user |
 | D61 | 2026-11-23 | Sleeping: no "zzzZ"; each dreamed emoji rises small from its head in a wavy zig-zag (9 s), following the one before. | accepted | user |
 | D62 | 2026-11-23 | Dream animation: instead of a zig-zag, each emoji drifts to the right on a randomized path while rising and growing. Rising speed follows the time between dream emojis (rise ≈ 3 gaps, 1.5–30 s), for all emojis in the air at once. | accepted | user |
+| D63 | 2026-11-23 | Dream animation: no drift, the emojis rise straight up (growing, pace-dependent speed as in D62). | accepted | user |

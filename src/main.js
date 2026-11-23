@@ -151,13 +151,13 @@ function lastEntry(who) {
   return null;
 }
 
-// dreaming: each new dream emoji rises from its head, drifting to the right on its own randomized path.
+// dreaming: each new dream emoji rises straight up from its head, growing as it goes.
 // Rising speed follows the pace of the dreams: the shorter the time between dream emojis, the faster
 // all of them rise (and they slow down again when the dreams come slower), so about 3 are visible.
 let dreamSpawned = -1;
 let lastSpawn = 0;
 let dreamGap = 3000; // smoothed real ms between dream emojis
-const flying = []; // { node, start (progress clock at spawn), path }
+const flying = []; // { node, start (progress clock at spawn) }
 const RISE_PX = 200;
 
 // a shared "progress clock": how far (in whole rises) everything has moved. Its speed follows the
@@ -186,10 +186,7 @@ function showDream(m) {
   node.className = 'dream-emoji';
   node.textContent = tok;
   el.dreams.append(node);
-  // a randomized drift to the right: 4 points on the way up, each a bit further right, with some jitter
-  const drift = 25 + Math.random() * 45;
-  const path = [0, 1, 2, 3].map((k) => (drift * k) / 3 + (k ? (Math.random() - 0.5) * 22 : 0));
-  flying.push({ node, start: progress, path });
+  flying.push({ node, start: progress });
 }
 
 function clearDreams() {
@@ -207,12 +204,7 @@ function animateDreams() {
       flying.splice(i, 1);
       continue;
     }
-    // smooth (cosine) interpolation between the path points
-    const seg = Math.min(2, Math.floor(p * 3));
-    const u = p * 3 - seg;
-    const w = (1 - Math.cos(Math.PI * u)) / 2;
-    const x = f.path[seg] + (f.path[seg + 1] - f.path[seg]) * w;
-    f.node.style.transform = `translate(${x.toFixed(1)}px, ${(-RISE_PX * p).toFixed(1)}px) scale(${(0.7 + 1.2 * p).toFixed(3)})`;
+    f.node.style.transform = `translateY(${(-RISE_PX * p).toFixed(1)}px) scale(${(0.7 + 1.2 * p).toFixed(3)})`;
     f.node.style.opacity = String(Math.min(1, p / 0.1) * (p > 0.7 ? (1 - p) / 0.3 : 1) * 0.75);
   }
   requestAnimationFrame(animateDreams);

@@ -97,7 +97,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 600 18px/1 ui-sans-serif, system-ui;
   color: var(--accent);
 }
-/* dreams: little emojis rise from its head, drifting right (moved by main.js) */
+/* dreams: little emojis rise straight up from its head (moved by main.js) */
 .creature-wrap { position: relative; }
 .dreams { position: absolute; left: 50%; top: 6px; width: 0; height: 0; pointer-events: none; }
 .dream-emoji {

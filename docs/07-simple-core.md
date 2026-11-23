@@ -70,8 +70,7 @@ Recent patterns count more, older ones slowly fade but are never forgotten abrup
 Fixed capacity: ~80 of your inputs (≈ 6–8 min). Below 25% energy it can nod off. It falls asleep
 after 2 min alone. Energy recovers in ~60 min. One dream emoji every 3 s (≈ 1,200 per full sleep).
 It wakes by itself 2–20 s after it's rested while the app is open, or when you send an emoji
-(groggy if early). While it sleeps, each dreamed emoji rises from its head, growing and drifting to the right on its own
-randomized path (D61, D62). The rising speed follows the dream pace: dreams coming faster (e.g.
+(groggy if early). While it sleeps, each dreamed emoji rises straight up from its head, growing as it goes (D61–D63). The rising speed follows the dream pace: dreams coming faster (e.g.
 fast-forward) make all of them rise faster, slower dreams slow them down; about 3 are visible. A creature that knows nothing yet dreams nothing.
 
 ## Settings (test panel sliders)
