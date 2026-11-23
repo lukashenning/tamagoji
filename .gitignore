@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# generated simulation output (reports in docs/simulations are tracked)
+sim/out/
+
+# Python
+__pycache__/
+
+# local Claude Code settings
+.claude/settings.local.json
