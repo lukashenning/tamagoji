@@ -54,6 +54,7 @@ export class Mind {
     this.rejected = []; // signs ✗'d in a row, taken back by a ✓ after its next sign
     this.armed = false; // it answered your ✗ with a real sign: a ✓ now takes back `rejected`
     this.waitStreak = 0; // your ☐ in a row
+    this.pendingCut = false; // a special sign came since the last real sign
     this.greeting = false; // it woke up by itself: its next move is a surprise sign
     this.lastEffect = null; // what the last ✓ / ✗ did (for the panel)
 
@@ -99,10 +100,26 @@ export class Mind {
   }
 
   push(tok, who) {
-    const entry = { tok, who, h: this.h };
+    const entry = { tok, who, h: this.h, cutBefore: this.pendingCut }; // cutBefore: a special sign came right before it
+    this.pendingCut = false;
     this.seq.push(entry);
     this.vocab.add(tok);
     return entry;
+  }
+
+  /**
+   * How many levels a link to the sign at index i (of `list`; i = list.length for a new sign) may
+   * change: level 1 always; levels 2–4 only if no special sign (✓ ✗ ☐, yours or its) came anywhere
+   * between the signs of that chain. `cutOfTarget`: a special sign came right before the sign itself.
+   */
+  chainLevels(list, i, cutOfTarget) {
+    let L = 1;
+    let ok = !cutOfTarget;
+    for (let j = i - 1; L < this.p.levels && ok && j - 1 >= 0; j--) {
+      ok = !list[j].cutBefore;
+      if (ok) L++;
+    }
+    return L;
   }
 
   input(t, cost) {
@@ -114,12 +131,13 @@ export class Mind {
     this.turn = 'C';
   }
 
-  /** You sent a real sign: it strengthens that sign's links to what came before, on all levels. */
+  /** You sent a real sign: it strengthens that sign's links to what came before (levels 2–4 only
+   * where no special sign interrupted the chain). */
   playerSign(tok, t) {
     const ex = this.expect();
     const mine = ex.probs.find(([s]) => s === tok);
     this.lastEval = { tok, p: mine ? mine[1] : 0, top: ex.probs[0]?.[0] ?? null, pTop: ex.probs[0]?.[1] ?? 0 };
-    this.assoc.add(this.context(), tok, this.p.repeatWeight);
+    this.assoc.add(this.context(), tok, this.p.repeatWeight, this.chainLevels(this.seq, this.seq.length, this.pendingCut));
     this.push(tok, 'P');
     this.lastPlayer = 'sign';
     this.waitStreak = 0;
@@ -135,14 +153,17 @@ export class Mind {
     if (i < 0) return null;
     const ctx = this.context(this.seq.slice(0, i));
     const tok = this.seq[i].tok;
-    this.assoc.add(ctx, tok, amount);
-    return { ctx, tok, amount };
+    const maxL = this.chainLevels(this.seq, i, this.seq[i].cutBefore);
+    this.assoc.add(ctx, tok, amount, maxL);
+    return { ctx, tok, amount, maxL };
   }
 
   /** Take a sign back: it stays in the history but is no longer context, nor its output. */
   takeBack(entry) {
     const i = this.seq.indexOf(entry);
     if (i < 0) return;
+    // its gap goes with it: the next sign now follows what came before (the ✗ in between goes too)
+    if (this.seq[i + 1]) this.seq[i + 1].cutBefore = entry.cutBefore;
     this.seq.splice(i, 1);
     const j = this.outputs.findIndex((o) => o.h === entry.h);
     if (j >= 0) this.outputs.splice(j, 1);
@@ -165,7 +186,7 @@ export class Mind {
         // right after its ✓ / ✗: your ✗ inverts its effect, your ✓ applies it once more
         const r = this.reaction;
         const delta = tok === YES ? r.amount : -2 * r.amount;
-        this.assoc.add(r.ctx, r.tok, delta);
+        this.assoc.add(r.ctx, r.tok, delta, r.maxL);
         this.lastEffect = desc({ ...r, amount: delta }, tok === YES ? 'repeats its reaction:' : 'inverts its reaction:');
         this.rejected = [];
         this.armed = false;
@@ -187,6 +208,7 @@ export class Mind {
     }
     this.reaction = null;
     this.lastPlayer = tok;
+    this.pendingCut = true; // a special sign: higher-level chains don't reach across it
     this.input(t, 0.5);
   }
 
@@ -210,6 +232,7 @@ export class Mind {
     }
     this.rejected = [];
     this.armed = false;
+    this.pendingCut = true;
     this.turn = 'P';
   }
 
@@ -400,11 +423,12 @@ export class Mind {
       // learn from the dream, as far as it got (sleep consolidates)
       const s = this.sleep;
       const n = Math.min(s.count, Math.floor((t - s.start) / s.interval) + 1);
-      const toks = this.seq.map((x) => x.tok);
-      for (const tok of s.dream.slice(0, n)) {
-        this.assoc.add(this.context(toks), tok, this.p.dreamWeight);
-        toks.push(tok);
-      }
+      const list = this.seq.slice();
+      s.dream.slice(0, n).forEach((tok, k) => {
+        const cut = k === 0 && this.pendingCut;
+        this.assoc.add(this.context(list), tok, this.p.dreamWeight, this.chainLevels(list, list.length, cut));
+        list.push({ tok, cutBefore: cut });
+      });
       this.stats.dreamLearned = n;
       this.energy = this.energyAt(t);
       this.updateSeats(); // its look changes (if at all) while it sleeps

@@ -173,7 +173,7 @@ export function buildPanel(root, h) {
       .map(([L, xs]) => `<tr><td>level ${L} <span class="dim">(${live.data.sizes[L]})</span></td><td>${xs.map((x) => pill(`${x.ctx.join('')}→${x.sign} ${x.w > 0 ? '+' : ''}${num(x.w, x.w % 1 ? 1 : 0)}`)).join(' ')}</td></tr>`)
       .join('');
     out.push(`<section><h3>association memory <span class="dim">(live)</span></h3>
-      <div class="dim">Your sign: +${p.repeatWeight} on all levels. ✓ +${p.yesWeight}, ✗ −${p.noWeight} on the last real sign. Dreams +${p.dreamWeight}. (number) = contexts known on that level.</div>
+      <div class="dim">Your sign: +${p.repeatWeight}. ✓ +${p.yesWeight}, ✗ −${p.noWeight} on the last real sign. Dreams +${p.dreamWeight}. Level 1 always; levels 2–4 only where no ✓ ✗ ☐ came between the signs. (number) = contexts known on that level.</div>
       <table class="rules">${strongRows || '<tr><td class="dim">nothing learned yet</td></tr>'}</table>
       <div>${m.seq.length} real signs in the conversation · ${m.stats.takenBack} taken back · last dream: learned ${m.stats.dreamLearned} dreamed signs</div>
     </section>`);

@@ -22,6 +22,13 @@ levels (both speakers' real signs count as context; special signs are skipped):
 | 3 | `b a x → s` |
 | 4 | `c b a x → s` |
 
+**Special signs cut chains** (D68): levels 2–4 only change if no special sign (✓ ✗ ☐, yours or its)
+came anywhere between the signs of that chain; level 1 always changes. When you enter the final D,
+`Z A B C D` strengthens `ZABC→D`, `ABC→D`, `BC→D` and `C→D`, but `Z A ✗ B C D` only `BC→D` and
+`C→D`. This holds for your signs, ✓ / ✗ (yours and its) and dreams. Its expectation still reads
+across special signs. A take-back removes the rejected sign together with the ✗ after it, so the
+retried sign joins the chain before it.
+
 Each repeat adds **+1** to that link. Its own signs are learned only through ✓ / ✗ (and a little
 in dreams).
 

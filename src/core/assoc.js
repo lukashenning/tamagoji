@@ -34,11 +34,11 @@ export class Assoc {
     return L + '|' + ctx.slice(ctx.length - L).join(SEP);
   }
 
-  /** Add `amount` to "after ctx comes sign" on every level the context is long enough for. */
-  add(ctx, sign, amount) {
+  /** Add `amount` to "after ctx comes sign" on levels 1 … maxLevel (as far as the context reaches). */
+  add(ctx, sign, amount, maxLevel = this.p.levels) {
     if (!amount) return;
     this.version++;
-    const maxL = Math.min(this.p.levels, ctx.length);
+    const maxL = Math.min(this.p.levels, maxLevel, ctx.length);
     for (let L = 1; L <= maxL; L++) {
       const k = this.key(ctx, L);
       let row = this.table.get(k);
