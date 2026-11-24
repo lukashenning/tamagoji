@@ -51,9 +51,9 @@ For the current context, each level votes for the signs that followed that conte
    - always at least **10%**,
    - **+ repetition**: for a pattern of length k (1–4) repeating at the end of the real signs
      (☐ ✓ ✗ ignored), m = how many signs at the end repeat the sign k places earlier.
-     Pressure = max over k of m / k² (more repeats → more, shorter patterns → more), × 0.16.
-     Examples: `a b a` +4%, `a b a b a b a b` +24%, `a b c a b c` +5%, `abcd abcd abcd` +8%,
-     `a a a a` +48%.
+     Pressure = max over k of m / k² (more repeats → more, shorter patterns → more), × 0.3.
+     Examples: `a a` +30%, `a a a` +60%, `a b a` +8%, `a b a b` +15%, `a b a b a b` +30%,
+     `a b c a b c` +10%, `abcd abcd abcd` +15% (total capped at 70%).
    - **+ waiting**: from your 4th ☐ in a row, +5% per further ☐ (max +40%), so it gets playful,
    - at most 70% in total.
 5. **Otherwise its expectation**; with no expectation at all (e.g. after a sign it has never seen

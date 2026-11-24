@@ -28,7 +28,7 @@ export const DEFAULT_PARAMS = {
 
   // surprise: a random emoji from this hour's keyboard set
   surpriseBase: 0.1, // always at least this
-  repeatSurprise: 0.16, // × repetition pressure (max over k of m / k²)
+  repeatSurprise: 0.3, // × repetition pressure (max over k of m / k²): one sign twice +30%, abab +15%
   waitSurpriseFrom: 4, // your ☐ in a row from which waiting makes it playful
   waitSurprise: 0.05, // … + this per further ☐
   waitSurpriseMax: 0.4,
@@ -68,6 +68,6 @@ export const SLIDERS = [
   { key: 'noWeight', label: '✗ strength', min: 0, max: 10, step: 0.5 },
   { key: 'reactYes', label: 'its ✓ when you did what it expected', min: 0, max: 1, step: 0.05 },
   { key: 'surpriseBase', label: 'base surprise', min: 0, max: 0.5, step: 0.01 },
-  { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.5, step: 0.01 },
+  { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.8, step: 0.01 },
   { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.5, step: 0.05 },
 ];
