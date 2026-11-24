@@ -101,13 +101,13 @@ function play(seed, steps) {
       const p = ex.probs.find(([x]) => x === tok)?.[1] ?? 0;
       const wasArmed = m.armed;
       const backBefore = m.takenBack.size;
-      const levels = Math.min(P.levels, m.seq.length);
+      const levels = Math.min(m.chainLevels(m.seq, m.seq.length, m.pendingCut), m.seq.length);
       const ctx = m.context();
       o({ t, who: 'P', tok });
       if (!isElemental(tok)) {
         if (Math.abs(m.lastEval.p - p) > 1e-9) flag('its recorded expectation = what it expected before your sign', `${p} vs ${m.lastEval.p}`);
         for (let L = 1; L <= levels; L++) {
-          if (!m.assoc.table.get(L + '|' + ctx.slice(ctx.length - L).join('\u0001'))?.has(tok)) flag('your sign is linked on all levels', `L${L}`);
+          if (!m.assoc.table.get(L + '|' + ctx.slice(ctx.length - L).join('\u0001'))?.has(tok)) flag('your sign is linked on the levels its chain allows', `L${L}`);
         }
         if (p >= P.reactYesAt) stats.reactYes[1]++;
         if (ex.probs[0] && ex.probs[0][0] !== tok && ex.probs[0][1] >= P.reactNoTop && p < P.reactNoBelow) stats.reactNo[1]++;
@@ -150,7 +150,7 @@ const rules = [
   'no ☐ right after your ☐',
   'surprises come from the hourly set',
   'its recorded expectation = what it expected before your sign',
-  'your sign is linked on all levels',
+  'your sign is linked on the levels its chain allows',
   'take-back only after ✗ → its sign → ✓',
   'special signs are never in the sequence',
   'taken-back signs are not in the sequence',

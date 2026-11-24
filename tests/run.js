@@ -37,7 +37,11 @@ function fresh(seed = 1, params = P) {
   o('S', BIRTH);
   return { m, o, t, history };
 }
-/** You show a sequence while it waits (its ☐ between your signs). */
+/** You say a sequence of signs in a row (no special signs in between: the chain stays whole). */
+function say(o, toks) {
+  for (const tok of toks) o('P', tok);
+}
+/** You show a sequence while it waits (its ☐ between your signs: only level-1 links form). */
 function demo(o, toks) {
   for (const tok of toks) {
     o('C', ASK);
@@ -50,33 +54,44 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
 // 1. learning on 4 levels: your sign strengthens its links to the 1…4 signs before it; repeats add
 {
   const { m, o } = fresh();
-  demo(o, ['🍎', '🍐', '🍋', '🍇', '🍓']);
-  demo(o, ['🍎', '🍐', '🍋', '🍇', '🍓']);
+  say(o, ['🍎', '🍐', '🍋', '🍇', '🍓']);
+  say(o, ['🍎', '🍐', '🍋', '🍇', '🍓']);
   const l = [link(m, ['🍇'], '🍓'), link(m, ['🍋', '🍇'], '🍓'), link(m, ['🍐', '🍋', '🍇'], '🍓'), link(m, ['🍎', '🍐', '🍋', '🍇'], '🍓')];
   const noL5 = !m.assoc.table.has('5|' + ['🍎', '🍐', '🍋', '🍇'].join(SEP));
   check('your sign: +1 on levels 1–4, repeats add', l.every((x) => x === 2) && noL5, `🍓 after 🍇 / 🍋🍇 / 🍐🍋🍇 / 🍎🍐🍋🍇: ${l.join(' / ')}`);
 }
 
-// 2. special signs are never context: associations skip ✓ ✗ ☐
+// 2. special signs are never context, and they cut chains: levels 2–4 only learn uninterrupted chains
 {
   const { m, o } = fresh();
-  o('C', ASK);
-  o('P', '🐶');
+  say(o, ['🧊', '🐶']);
   o('C', '🦴');
   o('P', YES);
   o('C', ASK);
   o('P', ASK);
   o('C', '🎾');
   o('P', '🌞');
-  check('✓ ✗ ☐ are skipped as context', link(m, ['🎾'], '🌞') === 1 && link(m, ['🐶', '🦴', '🎾'], '🌞') === 1 && m.seq.every((x) => ![YES, NO, ASK].includes(x.tok)), m.seq.map((x) => x.tok).join(''));
+  const skipped = m.seq.every((x) => ![YES, NO, ASK].includes(x.tok));
+  const cut = link(m, ['🎾'], '🌞') === 1 && link(m, ['🦴', '🎾'], '🌞') === 0 && link(m, ['🧊', '🐶'], '🦴') === 3;
+  // your example: Z A B C D strengthens ZABC→D … C→D, but Z A ✗ B C D only BC→D and C→D
+  const a = fresh();
+  say(a.o, ['🇿', '🅰️', '🅱️', '©️', '🇩']);
+  const whole = [['©️'], ['🅱️', '©️'], ['🅰️', '🅱️', '©️'], ['🇿', '🅰️', '🅱️', '©️']].map((c) => link(a.m, c, '🇩'));
+  const b = fresh();
+  say(b.o, ['🇿', '🅰️']);
+  b.o('P', NO);
+  say(b.o, ['🅱️', '©️', '🇩']);
+  const broken = [['©️'], ['🅱️', '©️'], ['🅰️', '🅱️', '©️'], ['🇿', '🅰️', '🅱️', '©️']].map((c) => link(b.m, c, '🇩'));
+  const expectsAcross = b.m.expect(['🅰️', '🅱️', '©️']).levels.length === 3;
+  check('✓ ✗ ☐ are never context and cut chains (levels 2–4)', skipped && cut && whole.join() === '1,1,1,1' && broken.join() === '1,1,0,0' && expectsAcross, `ZABCD → D on levels 1–4: ${whole.join(' ')} · ZA✗BCD: ${broken.join(' ')} · 🐶 🦴 ✓ ☐ ☐ 🎾 🌞: 🎾→🌞 ${link(m, ['🎾'], '🌞')}, 🦴🎾→🌞 ${link(m, ['🦴', '🎾'], '🌞')}`);
 }
 
 // 3. longer contexts count more: a 4-sign context seen twice outvotes a 1-sign link seen 20 times
 {
   const { m, o } = fresh();
-  for (let i = 0; i < 20; i++) demo(o, ['🎈', '🌙', '🐟']); // after 🐟 usually 🎈 …
-  for (let i = 0; i < 2; i++) demo(o, ['🍕', '🚗', '🌙', '🐟', '🦄']); // … but after 🍕🚗🌙🐟 comes 🦄
-  demo(o, ['🍕', '🚗', '🌙', '🐟']);
+  for (let i = 0; i < 20; i++) say(o, ['🎈', '🌙', '🐟']); // after 🐟 usually 🎈 …
+  for (let i = 0; i < 2; i++) say(o, ['🍕', '🚗', '🌙', '🐟', '🦄']); // … but after 🍕🚗🌙🐟 comes 🦄
+  say(o, ['🍕', '🚗', '🌙', '🐟']);
   const ex = m.expect();
   check('a specific 4-sign context outvotes a common 1-sign link', ex.probs[0][0] === '🦄', ex.probs.slice(0, 3).map(([t, q]) => `${t} ${pct(q)}`).join(' · ') + ` · votes 🦄 ${ex.votes.get('🦄').toFixed(1)} / 🎈 ${ex.votes.get('🎈').toFixed(1)}`);
 }
@@ -84,14 +99,15 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
 // 4. ✓ +3 / ✗ −3 on the last real sign, on all levels; links can go negative
 {
   const { m, o } = fresh();
-  demo(o, ['🐶', '🌞']);
+  say(o, ['🐶', '🌞']);
   o('C', '🦴');
   o('P', YES);
   const plus = [link(m, ['🌞'], '🦴'), link(m, ['🐶', '🌞'], '🦴')];
-  o('P', '🐶');
-  o('C', '🌞');
-  o('P', NO);
-  const minus = link(m, ['🦴', '🐶'], '🌞');
+  const g = fresh();
+  say(g.o, ['🦴', '🐶']);
+  g.o('C', '🌞');
+  g.o('P', NO);
+  const minus = link(g.m, ['🦴', '🐶'], '🌞');
   check('✓ +3 / ✗ −3 on the last real sign (all levels)', plus[0] === 3 && plus[1] === 3 && minus === -3, `🌞→🦴 ${plus[0]} · 🐶🌞→🦴 ${plus[1]} · 🦴🐶→🌞 ${minus}`);
 }
 
@@ -148,7 +164,15 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
   g.o('C', '🎾');
   g.o('P', '🍕');
   const toks3 = g.m.seq.map((x) => x.tok).join('');
-  check('"not that, this": A ✗ B ✓ takes A back (also A ✗ B ✗ C ✓)', ok && toks2 === '🐶🌞' && link(f.m, ['🐶'], '🌞') === 3 && toks3 === '🐶🦴🎾🍕', `${toks} (🐶→🎾 +3, 🐶→🦴 −3) · ${toks2} · without ✓: ${toks3}`);
+  // the retried sign joins the chain before the rejected one, on the higher levels too
+  const h = fresh();
+  say(h.o, ['🌙', '🐶']);
+  h.o('C', '🦴');
+  h.o('P', NO);
+  h.o('C', '🎾');
+  h.o('P', YES);
+  const joined = link(h.m, ['🌙', '🐶'], '🎾') === 3;
+  check('"not that, this": A ✗ B ✓ takes A back (also A ✗ B ✗ C ✓), B joins the chain', ok && joined && toks2 === '🐶🌞' && link(f.m, ['🐶'], '🌞') === 3 && toks3 === '🐶🦴🎾🍕', `${toks} (🐶→🎾 +3, 🐶→🦴 −3) · 🌙🐶→🎾 ${link(h.m, ['🌙', '🐶'], '🎾')} · ${toks2} · without ✓: ${toks3}`);
 }
 
 // 7. its ☐: 5% base, up to 25% when its top two are close; not while you are waiting
