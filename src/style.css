@@ -214,6 +214,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .history span { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 1px; }
 .h-c { background: var(--c); }
 .h-p { background: var(--p); }
+.taken-back { text-decoration: line-through; opacity: 0.45; }
 .h-sys { font: 11px/1.6 ui-sans-serif, system-ui; color: var(--dim); padding: 0 6px !important; }
 
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; border: 1px solid var(--line); }

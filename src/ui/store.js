@@ -5,8 +5,8 @@ import { ENGINE_VERSION, DEFAULT_PARAMS } from '../core/params.js';
 import { makeCharacter } from '../core/emojiIndex.js';
 import { rngFor } from '../core/rng.js';
 
-const KEY = 'tamagoji.creature.v1';
-const PKEY = 'tamagoji.params.v1';
+const KEY = 'tamagoji.creature.exp1'; // branch `experiment`: its own creature, apart from `main`'s
+const PKEY = 'tamagoji.params.exp1';
 
 export function newCreature(now, params = DEFAULT_PARAMS) {
   const seed = Math.floor(Math.random() * 4294967296) >>> 0;

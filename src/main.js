@@ -114,7 +114,7 @@ function tick() {
         const d = m.decide(Math.random, now);
         s.why = d.why;
         append({ t: now, who: d.tok === SLEEP ? 'S' : 'C', tok: d.tok, ...(d.m ? { m: d.m } : {}) });
-        if (d.tok !== SLEEP) playMelody(d.tok, voiceFor(m.look));
+        if (d.tok !== SLEEP) playMelody(d.tok, voiceFor(m.seats));
       }
     }
   } else if (m.sleep) {
@@ -282,12 +282,12 @@ const handlers = {
   // listen: its last sign (or ❓) in its voice, or in each archetype voice one after another
   hearVoice() {
     unlockAudio();
-    playMelody(lastEntry('C')?.tok || ASK, voiceFor(s.mind.look));
+    playMelody(lastEntry('C')?.tok || ASK, voiceFor(s.mind.seats));
   },
   hearInstruments(show) {
     unlockAudio();
     const tok = lastEntry('C')?.tok || ASK;
-    const voice = voiceFor(s.mind.look);
+    const voice = voiceFor(s.mind.seats);
     Object.entries(ARCHETYPES).forEach(([name, a], i) =>
       setTimeout(() => {
         show(`${tok} as ${name}`);

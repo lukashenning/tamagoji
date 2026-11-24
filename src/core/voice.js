@@ -1,15 +1,10 @@
-// The creature's voice: how its melodies sound. Derived from the continuous traits of its appearance
-// basis (mind.look), so look and sound change together, and gradually: a small change in its patterns
-// moves the voice a little, a big change a lot. The synth is one recipe with continuous settings
-// (src/ui/sound.js); familiar instruments are just regions of that space (see ARCHETYPES).
-//
-//   face        shape → rich (pure tone … many overtones)   size → struck (held … struck and ringing)
-//               texture → metal (wood … bell-like)
-//   extremities shape → note length (short … long)          size → hollow (fewer even overtones: "chip")
-//   hair        shape → glide into each note (scoop up … drop down)   size → breath (airy noise)
-//   object      shape → wobble (vibrato)                    size → chorus (a second, detuned voice)
-//
-// A slot's influence fades in with its presence (it unlocks with complexity); until then it keeps the default.
+// The creature's voice: how its melodies sound (docs/08). Every sign has its own fixed synth settings;
+// the voice is a blend of the 6 seat signs' settings, weighted by how often it used each. So a new
+// sign entering the top 6 (usually at #6, with few uses) shifts the voice only slightly. The synth is
+// one recipe with continuous settings (src/ui/sound.js); familiar instruments are regions of that
+// space (see ARCHETYPES).
+
+import { hashString } from './rng.js';
 
 export const DEFAULT_VOICE = { rich: 0.2, struck: 0.7, metal: 0.1, length: 0.8, hollow: 0, glide: 0.06, breath: 0, wobble: 0, chorus: 0 };
 
@@ -25,24 +20,35 @@ export const ARCHETYPES = {
   brass: { rich: 1, struck: 0.3, metal: 0.2, hollow: 0, breath: 0.15 },
 };
 
-const MAP = {
-  face: { shape: ['rich', 0, 1], size: ['struck', 0, 1], texture: ['metal', 0, 1] },
-  extremities: { shape: ['length', 0.35, 0.95], size: ['hollow', 0, 1] },
-  hair: { shape: ['glide', -0.08, 0.08], size: ['breath', 0, 0.8] },
-  object: { shape: ['wobble', 0, 0.03], size: ['chorus', 0, 1] },
+// each setting's range
+const RANGES = {
+  rich: [0, 1], // pure tone … many overtones
+  struck: [0, 1], // held … struck and ringing
+  metal: [0, 1], // wood … bell-like
+  length: [0.35, 0.95], // share of a step the note is held
+  hollow: [0, 1], // fewer even overtones ("chip")
+  glide: [-0.08, 0.08], // scoop up … drop down into each note
+  breath: [0, 0.8], // airy noise
+  wobble: [0, 0.03], // vibrato
+  chorus: [0, 1], // a second, detuned voice
 };
 
-/** @param {object} look mind.look (continuous traits per slot) */
-export function voiceFor(look = {}) {
-  const v = { ...DEFAULT_VOICE };
-  for (const [slot, traits] of Object.entries(MAP)) {
-    const x = look[slot];
-    if (!x) continue;
-    const presence = x.presence ?? 1;
-    for (const [trait, [key, lo, hi]] of Object.entries(traits)) {
-      const raw = lo + (hi - lo) * x[trait];
-      v[key] = +(v[key] + presence * (raw - v[key])).toFixed(3);
-    }
+/** A sign's own settings, 0…1 each (fixed per sign). */
+const own = (tok, key) => hashString(`voice:${key}:${tok}`) / 4294967296;
+
+/** @param {{ tok: string, uses: number }[]} seats mind.seats */
+export function voiceFor(seats = []) {
+  if (!seats.length) return { ...DEFAULT_VOICE };
+  const w = seats.map((s) => Math.max(1, s.uses || 0));
+  const sum = w.reduce((a, b) => a + b, 0);
+  const q = w.map((x) => x / sum);
+  // a blend of many signs drifts to the middle; rescale so a blend varies about as much as one sign
+  const spread = Math.sqrt(q.reduce((a, x) => a + x * x, 0)) || 1;
+  const v = {};
+  for (const [key, [lo, hi]] of Object.entries(RANGES)) {
+    const m = seats.reduce((a, s, i) => a + q[i] * own(s.tok, key), 0);
+    const x = Math.min(1, Math.max(0, 0.5 + (m - 0.5) / spread));
+    v[key] = +(lo + (hi - lo) * x).toFixed(3);
   }
   return v;
 }

@@ -6,6 +6,14 @@ identity (behaviour, later its appearance) should follow from its **token histor
 
 ## Current phase
 
+**Branch `experiment`: the sign engine (engine 1.0-exp, 2026-11-24)**, described in
+`docs/08-sign-engine.md`. A complete replacement of the engine from the user's sketch: associations on
+levels 1–4 (votes, longer contexts count double), ✓/✗ on the last real sign (+3/−3, negative links),
+its own ✓/✗ (your ✗ inverts, ✓ repeats), "not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure,
+surprise (10% base + repetition + waiting), ☐ chaining, dreams (+0.1), top 6 of its last 1000 outputs →
+seats (look) and a usage-weighted voice. Own browser storage (`tamagoji.creature.exp1`). `sim/` is not
+updated for it. `main` stays at v0.13 (below).
+
 **Prototype 0.13 on the simple core of 0.6** (2026-11-23), described in `docs/07-simple-core.md`. The user found
 v0.5 too complex and not working well, so it was stripped down:
 - one pattern memory over the whole history, used for next-token prediction
@@ -63,6 +71,7 @@ back without being asked. Prefer tuning existing parameters.
 | `docs/02-technology-options.md` | Model options, recommended architecture, storage, stack, experiment tooling |
 | `docs/03-open-questions.md` | Q&A tracker |
 | `docs/04-decisions.md` | Decisions log |
+| `docs/08-sign-engine.md` | **Branch `experiment`**: the sign engine (replaces 07 there) |
 | `docs/07-simple-core.md` | **Current design** (0.6): the simple core |
 | `docs/05-system-design.md` | Design of v0.1–0.5 (mostly superseded by 07) |
 | `docs/06-proposals-v6.md` | v0.5 changes after the first broad test (superseded by 07) |

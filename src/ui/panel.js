@@ -1,9 +1,8 @@
 // Test panel: look inside the creature and control time, settings and the creature itself.
-// Plain text and simple numbers. See docs/07.
+// Plain text and simple numbers. See docs/08 (the sign engine).
 
 import { SLIDERS, DEFAULT_PARAMS } from '../core/params.js';
-import { ASK, SLEEP, WAKE, BIRTH } from '../core/tokens.js';
-import { LOOK_SLOTS } from '../core/mind.js';
+import { SLEEP, WAKE, BIRTH } from '../core/tokens.js';
 import { melodyText, keyOf, KEY_NAMES } from '../core/melody.js';
 import { voiceFor, voiceText } from '../core/voice.js';
 import { soundOn } from './sound.js';
@@ -131,86 +130,83 @@ export function buildPanel(root, h) {
       ${s.save.engine !== s.engine ? `<div class="warn">saved with engine ${s.save.engine}, running ${s.engine}</div>` : ''}
     </section>`);
 
-    // ── why ──
+    // ── why: its last move and its expectation now ──
     const why = s.why;
-    const pred = m.awake ? m.predict() : null;
+    const ex = m.expect();
+    const sp = m.surpriseChance();
     const ev = m.lastEval;
-    out.push(`<section><h3>why it said that</h3>
-      ${
-        why
-          ? `<div>last move: <b>${why.mode}</b>${why.repetition !== undefined ? ` <span class="dim">· recent repetition ${pct(why.repetition)}</span>` : ''}</div>
-             ${why.top3 ? `<div>options: ${why.top3.map(([t, q]) => `${tokLabel(t)} ${pct(q)}`).join(' · ')}</div>` : ''}`
-          : '<div class="dim">no move since page load</div>'
-      }
-      ${
-        ev && ev.signal
-          ? `<div>you sent ${ev.tok}${ev.about && ev.about.length ? ' about its ' + ev.about.join('') : ev.tok === ASK ? (ev.streak > 1 ? ` (${ev.streak}× in a row)` : '') : ''}</div>`
-          : ev
-            ? `<div>you sent ${ev.tok} — it expected ${ev.expected || 'nothing'}${ev.expected ? ` (${pct(ev.sure)} sure)` : ''}${ev.asked ? ' · answer to its ❓ (×' + p.questionBoost + ')' : ''}</div>`
-            : ''
-      }
-      ${
-        pred
-          ? `<div>it expects next: ${
-              [...pred.dist].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t, q]) => `${t} ${pct(q * pred.conf)}`).join(' · ') || '–'
-            } <span class="dim">(based on the last ${pred.L} emoji${pred.L === 1 ? '' : 's'} · ${pct(pred.conf)} backed by patterns)</span></div>`
-          : ''
-      }
+    const ctx = m.context();
+    const levelRows = ex.levels
+      .slice()
+      .reverse()
+      .map((lv) => {
+        const links = lv.links
+          .slice()
+          .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+          .slice(0, 6)
+          .map(([t, w]) => pill(`${t} ${w > 0 ? '+' : ''}${num(w, w % 1 ? 1 : 0)}`))
+          .join(' ');
+        return `<tr><td>level ${lv.L} ×${num(lv.weight, lv.weight % 1 ? 2 : 0)}</td><td>${lv.ctx.join('')} → ${links || '<span class="dim">never seen</span>'}</td></tr>`;
+      })
+      .join('');
+    const wc = m.awake ? m.waitChance(ex.probs) : 0;
+    out.push(`<section><h3>why it said that · what it expects</h3>
+      <div>last move: ${why ? `<b>${why.mode}</b>` : '<span class="dim">none since page load</span>'}</div>
+      ${ev && m.lastPlayer === 'sign' ? `<div>your ${ev.tok}: it had expected it ${pct(ev.p)}${ev.top && ev.top !== ev.tok ? ` · it expected ${ev.top} (${pct(ev.pTop)})` : ''}</div>` : ''}
+      ${m.lastEffect ? `<div>your last ✓/✗: ${m.lastEffect}</div>` : ''}
+      <h4>votes for what follows ${ctx.join('') || '<span class="dim">(nothing yet)</span>'} <span class="dim">(link weights; a level's vote = level weight × log2(1 + weight))</span></h4>
+      <table class="rules">${levelRows || '<tr><td class="dim">no context yet</td></tr>'}</table>
+      <div>expects: ${ex.probs.slice(0, 6).map(([t, q]) => `${t} ${pct(q)}`).join(' · ') || '<span class="dim">nothing (uses its seed or a surprise)</span>'}</div>
+      <div>surprise <b>${pct(sp.total)}</b> = base ${pct(sp.base)} + repetition ${pct(sp.repetition)}${sp.rep.k ? ` <span class="dim">(${sp.rep.m} signs repeat a ${sp.rep.k}-sign pattern)</span>` : ''} + waiting ${pct(sp.waiting)}${m.waitStreak ? ` <span class="dim">(your ☐ ×${m.waitStreak})</span>` : ''} · its ☐ ${pct(wc)}</div>
     </section>`);
 
-    // ── pattern memory (live) ──
+    // ── association memory ──
     if (!live.data || live.mind !== m || Date.now() - live.at > 1500) {
-      const minW = p.repsToLearn * 0.75;
       const byL = [];
-      for (let L = 1; L <= p.contextMax; L++) byL.push([L, m.mem.patterns(L, 0.5, minW)]);
-      live.data = { byL };
+      for (let L = 1; L <= p.levels; L++) byL.push([L, m.assoc.strongest(L, 10)]);
+      live.data = { byL, sizes: m.assoc.sizes() };
       live.mind = m;
       live.at = Date.now();
     }
-    const rows = live.data.byL
-      .filter(([, ps]) => ps.length)
-      .map(([L, ps]) => `<tr><td>after ${L} emoji${L > 1 ? 's' : ''}</td><td>${ps.slice(0, 12).map((x) => pill(`${x.ctx.join('')}→${x.next} ${pct(x.share)}`)).join(' ')}${ps.length > 12 ? ` <span class="dim">+${ps.length - 12}</span>` : ''}</td></tr>`);
-    const g = m.mem.rowAt('');
-    const tendency = g ? g.items.sort((a, b) => b[1] - a[1]).slice(0, 10).map(([t, w]) => pill(`${t} ${pct(w / g.total)}`)).join(' ') : '–';
-    out.push(`<section><h3>pattern memory <span class="dim">(live)</span></h3>
-      <div class="dim">Confident patterns: at least 50% of what followed, seen about ${p.repsToLearn}× or more. ✅ strengthens and ❌ halves its reaction: the link to the emoji it answered and to the sequence it answered.</div>
-      <table class="rules">${rows.join('') || '<tr><td class="dim">no confident patterns yet</td></tr>'}</table>
-      <div>general tendency (the emojis themselves): ${tendency}</div>
-      <div>remembers ${m.mem.size} sequences · ${m.seq.length} emojis in the conversation · last dream: learned ${m.stats.dreamLearned} dreamed emojis</div>
+    const strongRows = live.data.byL
+      .filter(([, xs]) => xs.length)
+      .map(([L, xs]) => `<tr><td>level ${L} <span class="dim">(${live.data.sizes[L]})</span></td><td>${xs.map((x) => pill(`${x.ctx.join('')}→${x.sign} ${x.w > 0 ? '+' : ''}${num(x.w, x.w % 1 ? 1 : 0)}`)).join(' ')}</td></tr>`)
+      .join('');
+    out.push(`<section><h3>association memory <span class="dim">(live)</span></h3>
+      <div class="dim">Your sign: +${p.repeatWeight} on all levels. ✓ +${p.yesWeight}, ✗ −${p.noWeight} on the last real sign. Dreams +${p.dreamWeight}. (number) = contexts known on that level.</div>
+      <table class="rules">${strongRows || '<tr><td class="dim">nothing learned yet</td></tr>'}</table>
+      <div>${m.seq.length} real signs in the conversation · ${m.stats.takenBack} taken back · last dream: learned ${m.stats.dreamLearned} dreamed signs</div>
     </section>`);
 
-    // ── complexity & appearance basis ──
-    const cx = m.complexity();
-    const topSigns = [...cx.strength].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([e, x]) => pill(`${e} ${num(x, 1)}`)).join(' ');
-    const look = LOOK_SLOTS.map((slot, i) => {
-      const x = m.look[slot];
-      const lock = p.lookUnlock[i];
-      if (!x) return '';
-      const fade = x.presence < 1 ? ` · <span class="dim">present ${Math.round(x.presence * 100)}% (from complexity ${lock}, full at ${lock * 2})</span>` : '';
-      return `<tr><td>${slot}</td><td><span class="swatch" style="background:${x.color};opacity:${0.25 + 0.75 * x.presence}"></span> shape ${num(x.shape, 2)} · size ${num(x.size, 2)} · texture ${num(x.texture, 2)} · hue ${x.hue}°${fade}</td></tr>`;
-    });
+    // ── top signs → seats (look) & voice ──
+    const ranked = m.topSigns();
+    const liveUses = new Map(ranked.map((r) => [r.tok, r.uses]));
+    const top = ranked.slice(0, 10).map((r, i) => pill(`${i < p.seats ? '' : '<span class="dim">'}${r.tok} ${r.uses}${i < p.seats ? '' : '</span>'}`)).join(' ');
+    const seatRows = m.seats
+      .map((x) => `<tr><td>${x.seat}</td><td><span class="swatch" style="background:${x.color}"></span> ${x.tok} · style ${x.style + 1}/8 · hue ${x.hue}° · used ${liveUses.get(x.tok) || 0}×</td></tr>`)
+      .join('');
     const lastTok = (() => {
       for (let i = s.save.history.length - 1; i >= 0; i--) if (s.save.history[i].who === 'C') return s.save.history[i].tok;
       return null;
     })();
-    out.push(`<section><h3>complexity & appearance basis</h3>
-      <div>complexity <b>${num(cx.score, 1)}</b> · ${cx.signs} emojis in learned patterns <span class="dim">(Σ log2(1 + different patterns per emoji); random spam adds nothing)</span></div>
-      <div>most varied: ${topSigns || '–'} <span class="dim">(summed pattern strength: grows with ✅, shrinks with ❌)</span></div>
-      <h4>look <span class="dim">(a blend of its strongest pattern emojis; after each sleep it moves ${Math.round(p.lookFollow * 100)}% of the way to the new blend)</span></h4>
-      <div class="dim">blended from: ${m.lookMix.slice(0, 8).map(([e, q]) => `${e} ${Math.round(q * 100)}%`).join(' · ') || '–'}</div>
-      <table class="rules">${look.join('')}</table>
-      <div class="dim">voice: ${voiceText(voiceFor(m.look))}</div>
+    out.push(`<section><h3>top signs · seats · voice</h3>
+      <div>top signs (its last ${p.outputWindow} outputs, ${m.outputs.length} so far): ${top || '–'}</div>
+      <h4>seats <span class="dim">(a seat belongs to its sign; a new top-6 sign takes the seat of the one it dethroned; updated after each sleep)</span></h4>
+      <table class="rules">${seatRows}</table>
+      <div class="dim">voice: ${voiceText(voiceFor(m.seats))}</div>
       ${lastTok ? `<div class="dim">melody of its last sign ${lastTok}: ${melodyText(lastTok)} (${KEY_NAMES[keyOf(lastTok)]} major)</div>` : ''}
     </section>`);
 
     // ── history ──
-    const hist = s.save.history.slice(-160).map((e) => {
+    const offset = Math.max(0, s.save.history.length - 160);
+    const hist = s.save.history.slice(-160).map((e, i) => {
       if (e.tok === BIRTH) return `<span class="h-sys">birth</span>`;
       if (e.tok === SLEEP) return `<span class="h-sys">💤 ${new Date(e.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
       if (e.tok === WAKE) return `<span class="h-sys">☀︎ ${e.m === 'manual' ? 'woken' : 'wakes'} ${new Date(e.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
       const cls = e.who === 'C' ? 'h-c' : 'h-p';
-      const mark = e.m === 'answer' ? '›' : e.m === 'retry' ? '↺' : e.m === 'surprise' ? '✦' : '';
-      return `<span class="${cls}" title="${e.who === 'C' ? 'creature' : 'you'}${e.m ? ' · ' + e.m : ''}">${e.tok}${mark}</span>`;
+      const mark = e.m === 'surprise' ? '✦' : e.m === 'seed' ? '°' : '';
+      const back = m.takenBack.has(offset + i) ? ' taken-back' : '';
+      return `<span class="${cls}${back}" title="${e.who === 'C' ? 'creature' : 'you'}${e.m ? ' · ' + e.m : ''}${back ? ' · taken back' : ''}">${e.tok}${mark}</span>`;
     });
     out.push(`<section><h3>history <span class="dim">(${s.save.history.length} entries · <span class="h-c">creature</span> <span class="h-p">you</span>)</span></h3>
       <div class="history">${hist.join('')}</div></section>`);

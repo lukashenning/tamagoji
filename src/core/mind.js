@@ -1,30 +1,14 @@
-// The creature's mind (simple core, docs/07). Everything is rebuilt from the history:
+// The creature's mind: the sign engine (docs/08). Everything is rebuilt from the history:
 // mind = replay(history). observe(entry) is the only way state changes, live and on replay.
 // decide() picks its next move; the app writes it into the history and observes it.
 
-import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, SEP, isElemental, isContent } from './tokens.js';
+import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, isElemental } from './tokens.js';
 import { rngFor, sample, pick, hashString } from './rng.js';
 import { makeCharacter } from './emojiIndex.js';
 import { hourlySet } from './keyboard.js';
-import { Memory } from './memory.js';
+import { Assoc, strength } from './assoc.js';
 
-export const LOOK_SLOTS = ['face', 'extremities', 'hair', 'object'];
-export const LOOK_TRAITS = ['shape', 'size', 'texture']; // continuous, 0…1 (plus a hue per slot)
-
-/** How different two looks are: mean absolute trait difference over the slots (0 = same, ~0.3+ = very different). */
-export function lookDistance(a = {}, b = {}) {
-  let d = 0;
-  let n = 0;
-  for (const slot of LOOK_SLOTS) {
-    const x = a[slot];
-    const y = b[slot];
-    if (!x || !y) continue;
-    for (const t of LOOK_TRAITS) d += Math.abs(x[t] - y[t]);
-    d += Math.abs(((x.hue - y.hue + 540) % 360) - 180) / 180;
-    n += LOOK_TRAITS.length + 1;
-  }
-  return n ? d / n : 0;
-}
+export const SEATS = ['body', 'eyes', 'mouth', 'limbs', 'crest', 'accessory'];
 
 /**
  * Chance that your sign wakes it while it sleeps, from its energy (0…1): never below tiredBelow (10%),
@@ -35,17 +19,21 @@ export function wakeChance(energyFraction, p) {
   return Math.min(1, Math.max(0, ((energyFraction - p.tiredBelow) * 0.7) / (0.7 - p.tiredBelow)));
 }
 
+const pct = (x) => `${Math.round(x * 100)}%`;
+
 export class Mind {
   constructor(params, seed) {
     this.p = params;
     this.seed = seed;
 
     // memory
-    this.seq = []; // the conversation's ordinary emojis, both speakers
-    this.seqWho = []; // 'P' | 'C' per emoji
-    this.vocab = new Map(); // emoji -> { count, playerCount, firstWho }
-    this.mem = new Memory(params);
-    this.character = []; // seed emojis from birth (babbled while it knows nothing)
+    this.assoc = new Assoc(params);
+    this.seq = []; // the conversation's real signs (both speakers): { tok, who, h }; taken-back ones removed
+    this.outputs = []; // its own awake real signs: { tok, h } (for its top signs)
+    this.vocab = new Set(); // every real sign that came up (surprises prefer others)
+    this.character = []; // seed signs from birth
+    this.takenBack = new Set(); // history indices of signs taken back ("not that, this")
+    this.h = -1; // history index of the entry being observed
 
     // body & time
     this.capacity = params.capacity;
@@ -60,22 +48,18 @@ export class Mind {
     this.totalInputs = 0;
 
     // conversation state
-    this.question = false; // it asked ❓ and waits for your answer
-    this.chain = []; // its emojis since your last emoji: [{ ctx, tok }] (what ✅ / ❌ refer to)
-    this.rejected = null; // after ❌: emojis to avoid in its retry
-    this.notThat = null; // after ❌: { rejected } until ✅ or your next emoji ("not that, this")
-    this.asked = false; // you sent ❓: it answers with one best guess
-    this.lastEval = null; // how your last emoji compared to its expectation
-    this.lastCreatureAsk = false;
-    this.askStreak = 0; // your ❓ in a row
+    this.lastPlayer = null; // your last input: 'sign' | ✅ | ❌ | ❓
+    this.lastEval = null; // your last real sign vs its expectation: { tok, p, top, pTop }
+    this.reaction = null; // its last ✓ / ✗: { ctx, tok, amount } (your next ✓ / ✗ repeats or inverts it)
+    this.rejected = []; // signs ✗'d in a row, taken back by a ✓ after its next sign
+    this.armed = false; // it answered your ✗ with a real sign: a ✓ now takes back `rejected`
+    this.waitStreak = 0; // your ☐ in a row
+    this.lastEffect = null; // what the last ✓ / ✗ did (for the panel)
 
-    // appearance basis: slot -> { shape, size, texture, hue, presence, color } (at birth and after each sleep)
-    this.look = {};
-    this.lookMix = []; // [emoji, share] the look is blended from
-    this._cx = null; // cached complexity
+    // top signs → seats (look) and voice
+    this.seats = []; // [{ seat, tok, style, hue, color, uses }]
 
-    // stats for the test panel
-    this.stats = { yes: 0, no: 0, dreamLearned: 0 };
+    this.stats = { yes: 0, no: 0, takenBack: 0, dreamLearned: 0 };
   }
 
   static replay(save, params) {
@@ -87,40 +71,37 @@ export class Mind {
   // ───────────────────────── observing the history ─────────────────────────
 
   observe(e) {
+    this.h++;
     this.lastEntryT = e.t;
     const tok = LEGACY[e.tok] || e.tok;
     if (tok === BIRTH) return this.born(e);
     if (tok === SLEEP) return this.awake && this.fallAsleep(e.t);
     if (tok === WAKE) return !this.awake && this.wakeUp(e.t);
     if (e.who === 'P') {
-      if (isElemental(tok)) this.playerSignal(tok, e.t);
-      else this.playerTurn(tok, e.t);
-    } else if (isElemental(tok)) this.creatureSignal(tok);
-    else this.creatureMove(tok);
+      if (isElemental(tok)) this.playerSpecial(tok, e.t);
+      else this.playerSign(tok, e.t);
+    } else if (isElemental(tok)) this.creatureSpecial(tok);
+    else this.creatureSign(tok);
   }
 
   born(e) {
     this.character = e.m ? e.m.split(' ') : makeCharacter(rngFor(this.seed, 'character'), this.p.characterSize);
-    this.updateLook();
+    this.updateSeats();
     this.awake = true;
     this.turn = 'C';
     this.lastActivity = e.t;
   }
 
-  append(tok, who) {
-    this.seq.push(tok);
-    this.seqWho.push(who);
-    let v = this.vocab.get(tok);
-    if (!v) {
-      v = { count: 0, playerCount: 0, firstWho: who };
-      this.vocab.set(tok, v);
-    }
-    v.count++;
-    if (who === 'P') v.playerCount++;
+  /** The last `levels` real signs (the context for what comes next). */
+  context(toks = this.seq) {
+    return toks.slice(-this.p.levels).map((x) => (typeof x === 'string' ? x : x.tok));
   }
 
-  context() {
-    return this.seq.slice(-this.p.contextMax);
+  push(tok, who) {
+    const entry = { tok, who, h: this.h };
+    this.seq.push(entry);
+    this.vocab.add(tok);
+    return entry;
   }
 
   input(t, cost) {
@@ -128,295 +109,217 @@ export class Mind {
     this.sessionInputs++;
     this.totalInputs++;
     this.lastActivity = t;
-    this.asked = false;
     this.turn = 'C';
   }
 
-  /** You sent an ordinary emoji: it learns what follows the recent sequence. */
-  playerTurn(tok, t) {
-    const pred = this.predict();
-    const sure = pred.top ? pred.conf * pred.dist.get(pred.top) : 0;
-    this.lastEval = { tok, expected: pred.top, sure, matched: tok === pred.top, asked: this.question };
-    this.mem.learn(this.context(), tok, this.question ? this.p.questionBoost : 1);
-    this.append(tok, 'P');
-    this.question = false;
-    this.chain = [];
-    this.rejected = null;
-    this.notThat = null;
-    this.askStreak = 0;
+  /** You sent a real sign: it strengthens that sign's links to what came before, on all levels. */
+  playerSign(tok, t) {
+    const ex = this.expect();
+    const mine = ex.probs.find(([s]) => s === tok);
+    this.lastEval = { tok, p: mine ? mine[1] : 0, top: ex.probs[0]?.[0] ?? null, pTop: ex.probs[0]?.[1] ?? 0 };
+    this.assoc.add(this.context(), tok, this.p.repeatWeight);
+    this.push(tok, 'P');
+    this.lastPlayer = 'sign';
+    this.waitStreak = 0;
+    this.reaction = null;
+    this.rejected = [];
+    this.armed = false;
     this.input(t, 1);
   }
 
-  /** You sent ✅ ❌ or ❓ (❓ = your turn / what comes next?). */
-  playerSignal(tok, t) {
-    const chain = this.chain;
-    if (tok === YES) {
-      // reinforce its reaction: the link to the emoji it answered and to the sequence it answered
-      // "not that, this": the first ✅ after a ❌ counts extra (notThatWeight). Since the ❌ took the
-      // rejected part back, these links already go to what came before it.
-      const w = this.notThat ? this.p.notThatWeight : this.p.yesWeight;
-      for (const c of chain) this.mem.reinforce(c.ctx, c.tok, 1, w);
-      this.notThat = null;
-      this.stats.yes++;
-    } else if (tok === NO) {
-      // weaken the same links clearly (halve them), and let it try something else
-      for (const c of chain) this.mem.reinforce(c.ctx, c.tok, this.p.noFactor, -this.p.noWeight);
-      this.stats.no++;
+  /** ✓ / ✗ on the last real sign and its links on all levels. Returns what it did. */
+  applyToLast(amount) {
+    const i = this.seq.length - 1;
+    if (i < 0) return null;
+    const ctx = this.context(this.seq.slice(0, i));
+    const tok = this.seq[i].tok;
+    this.assoc.add(ctx, tok, amount);
+    return { ctx, tok, amount };
+  }
+
+  /** Take a sign back: it stays in the history but is no longer context, nor its output. */
+  takeBack(entry) {
+    const i = this.seq.indexOf(entry);
+    if (i < 0) return;
+    this.seq.splice(i, 1);
+    const j = this.outputs.findIndex((o) => o.h === entry.h);
+    if (j >= 0) this.outputs.splice(j, 1);
+    this.takenBack.add(entry.h);
+    this.stats.takenBack++;
+  }
+
+  /** You sent ✅ ❌ or ❓ (☐: "your turn"). */
+  playerSpecial(tok, t) {
+    const p = this.p;
+    if (tok === ASK) {
+      this.waitStreak = this.lastPlayer === ASK ? this.waitStreak + 1 : 1;
+      this.rejected = [];
+      this.armed = false;
+      this.lastEffect = null;
+    } else {
+      this.waitStreak = 0;
+      const desc = (x, what) => (x ? `${what} ${x.ctx.length ? x.ctx.join('') + ' → ' : ''}${x.tok} (${x.amount > 0 ? '+' : ''}${+x.amount.toFixed(2)})` : null);
+      if (this.reaction) {
+        // right after its ✓ / ✗: your ✗ inverts its effect, your ✓ applies it once more
+        const r = this.reaction;
+        const delta = tok === YES ? r.amount : -2 * r.amount;
+        this.assoc.add(r.ctx, r.tok, delta);
+        this.lastEffect = desc({ ...r, amount: delta }, tok === YES ? 'repeats its reaction:' : 'inverts its reaction:');
+        this.rejected = [];
+        this.armed = false;
+      } else if (tok === YES) {
+        // "not that, this": ✗ → its sign → ✓ takes back what was ✗'d, so the ✓ links its sign to
+        // what came before the rejected one(s)
+        const back = this.armed ? this.rejected.map((x) => x.tok) : [];
+        if (this.armed) for (const x of this.rejected) this.takeBack(x);
+        this.lastEffect = desc(this.applyToLast(p.yesWeight), back.length ? `takes back ${back.join('')}, then ✓` : '✓');
+        this.rejected = [];
+        this.armed = false;
+      } else {
+        const last = this.seq[this.seq.length - 1];
+        this.lastEffect = desc(this.applyToLast(-p.noWeight), '✗');
+        if (last) this.rejected = this.armed ? [...this.rejected, last] : [last];
+        this.armed = false; // waits for its next sign
+      }
+      this.stats[tok === YES ? 'yes' : 'no']++;
     }
-    this.askStreak = tok === ASK ? this.askStreak + 1 : 0;
-    this.lastEval = { tok, signal: true, about: tok === ASK ? [] : chain.map((c) => c.tok), streak: this.askStreak };
-    if (tok !== ASK) this.chain = []; // ❓ lets it carry on, so a later ✅ / ❌ still covers what it said
-    this.question = false;
+    this.reaction = null;
+    this.lastPlayer = tok;
     this.input(t, 0.5);
-    if (tok === NO && chain.length) {
-      // ❌ takes the rejected emoji(s) back: they leave the conversation's sequence, as if never said,
-      // so they don't become the context of what follows (and don't gain patterns from it)
-      this.seq.splice(-chain.length);
-      this.seqWho.splice(-chain.length);
-      const prev = this.notThat; // several ❌ in a row: "not that either"
-      this.notThat = { rejected: new Set([...(prev ? prev.rejected : []), ...chain.map((c) => c.tok)]) };
-      this.rejected = this.notThat.rejected;
-    }
-    if (tok === ASK) this.asked = true; // "what comes next?": it answers with one best guess
   }
 
-  /** Its ordinary emoji. Not learned by itself; only ✅ / ❌ (and dreams) teach it its own moves. */
-  creatureMove(tok) {
-    this.chain.push({ ctx: this.context(), tok });
-    this.append(tok, 'C');
-    this.question = false;
-    this.rejected = null;
-    this.lastCreatureAsk = false;
-    this.asked = false;
-    this.turn = 'P'; // one sign, then it waits for you
-  }
-
-  /** Its sign: ❓ = "I don't know / I'm listening" (your next emoji counts as an answer), ✅ ❌ react. */
-  creatureSignal(tok) {
-    this.question = tok === ASK;
-    this.lastCreatureAsk = tok === ASK;
-    this.asked = false;
-    this.rejected = null;
+  /** Its real sign. Not learned by itself; only ✓ / ✗ (and dreams) teach it its own moves. */
+  creatureSign(tok) {
+    const entry = this.push(tok, 'C');
+    this.outputs.push({ tok, h: entry.h });
+    if (this.rejected.length) this.armed = true;
+    this.reaction = null;
     this.turn = 'P';
   }
 
-  // ───────────────────────── predicting & deciding ─────────────────────────
+  /** Its ✓ / ✗ (on your last real sign, like yours) or its ☐ (acts just like yours: no effect). */
+  creatureSpecial(tok) {
+    this.reaction = null;
+    if (tok === YES || tok === NO) {
+      const r = this.applyToLast(tok === YES ? this.p.yesWeight : -this.p.noWeight);
+      if (r) this.reaction = r;
+    }
+    this.rejected = [];
+    this.armed = false;
+    this.turn = 'P';
+  }
 
-  predict() {
-    return this.mem.predict(this.seq);
+  // ───────────────────────── expecting & deciding ─────────────────────────
+
+  /**
+   * Its expectation for what follows `ctx`: every level votes (level weight × link strength), the
+   * votes per sign add up, and signs with a positive total get chances by softmax.
+   * Returns { levels, votes: Map, probs: [[sign, p]] (best first) }.
+   */
+  expect(ctx = this.context()) {
+    const levels = this.assoc.levelsFor(ctx);
+    const votes = new Map();
+    for (const lv of levels) for (const [s, w] of lv.links) votes.set(s, (votes.get(s) || 0) + lv.weight * strength(w));
+    const pos = [...votes].filter(([, v]) => v > 0);
+    let probs = [];
+    if (pos.length) {
+      const max = Math.max(...pos.map(([, v]) => v));
+      const e = pos.map(([s, v]) => [s, Math.exp((v - max) / this.p.temperature)]);
+      const sum = e.reduce((a, [, x]) => a + x, 0);
+      probs = e.map(([s, x]) => [s, x / sum]).sort((a, b) => b[1] - a[1]);
+    }
+    return { levels, votes, probs };
+  }
+
+  /** Repetition pressure of the real signs: max over pattern length k (1–4) of m / k². */
+  repetition(toks) {
+    const w = toks.slice(-16);
+    let best = { pressure: 0, k: 0, m: 0 };
+    for (let k = 1; k <= 4; k++) {
+      let m = 0;
+      for (let i = w.length - 1; i - k >= 0 && w[i] === w[i - k]; i--) m++;
+      const pressure = m / (k * k);
+      if (pressure > best.pressure) best = { pressure, k, m };
+    }
+    return best;
+  }
+
+  /** Surprise chance: base + repetition + waiting, capped. */
+  surpriseChance(toks = this.seq.map((x) => x.tok), waitStreak = this.waitStreak) {
+    const p = this.p;
+    const rep = this.repetition(toks);
+    const repetition = p.repeatSurprise * rep.pressure;
+    const waiting = waitStreak >= p.waitSurpriseFrom ? Math.min(p.waitSurpriseMax, p.waitSurprise * (waitStreak - p.waitSurpriseFrom + 1)) : 0;
+    return { total: Math.min(p.surpriseMax, p.surpriseBase + repetition + waiting), base: p.surpriseBase, repetition, waiting, rep };
+  }
+
+  /** Chance of its ☐: base, rising when its top two expectations are close. */
+  waitChance(probs) {
+    const p = this.p;
+    if (this.lastPlayer === ASK) return 0; // you're waiting: it carries on instead
+    let c = p.waitBase;
+    if (probs.length >= 2) {
+      const gap = probs[0][1] - probs[1][1];
+      if (gap <= p.waitClose) c += (p.waitMax - p.waitBase) * (1 - gap / p.waitClose);
+    }
+    return c;
   }
 
   label() {
     return this.awake ? '' : 'sleeping';
   }
 
-  /**
-   * A new emoji (novelty or surprise): one from the current hourly keyboard set, one it hasn't used
-   * yet if possible. Every emoji it tries for the first time comes from there.
-   */
-  paletteEmoji(rng, now) {
-    const set = hourlySet(this.seed, now);
+  /** With no expectation: one of its familiar signs (its seats: top signs, or its seed while it has none), by use. */
+  familiar(rng) {
+    return sample(this.seats.map((s) => [s.tok, 1 + s.uses]), rng);
+  }
+
+  /** A surprise: a random emoji from the hourly keyboard set at time t, preferring ones not used yet. */
+  paletteEmoji(rng, t) {
+    const set = hourlySet(this.seed, t);
     const unused = set.filter((e) => !this.vocab.has(e));
-    const recent = new Set(this.seq.slice(-12));
-    const pool = unused.length ? unused : set.filter((e) => !recent.has(e));
-    return pick(pool.length ? pool : set, rng);
-  }
-
-  /** Sample from a distribution with a given chaos, leaving out some emojis. */
-  sampleFrom(dist, T, rng, exclude) {
-    const entries = [...dist].filter(([t]) => !exclude || !exclude.has(t)).map(([t, q]) => [t, Math.pow(q, 1 / T)]);
-    return entries.length ? sample(entries, rng) : null;
-  }
-
-  top3(pred, exclude) {
-    return [...pred.dist]
-      .filter(([t]) => !exclude || !exclude.has(t))
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([t, q]) => [t, q * pred.conf]);
+    return pick(unused.length ? unused : set, rng);
   }
 
   /**
    * Its move: { tok, m, why }. Uses rng (not deterministic), but the result is written into the
-   * history, so replay never needs to repeat it. `now` picks the hourly keyboard set for surprises.
+   * history, so replay never needs to repeat it.
    */
   decide(rng = Math.random, now = this.lastEntryT) {
     const p = this.p;
-    const pred = this.predict();
-    const sure = pred.top ? pred.conf * pred.dist.get(pred.top) : 0;
-    const base = { pred };
+    const ex = this.expect();
+    const sp = this.surpriseChance();
+    const base = { ex, sp };
 
-    // 1. you sent ❓: what comes next? If it knows a continuation of the recent sequence (its own
-    // emojis included), it follows its learned pattern, however many ❓ in a row, so you can draw out
-    // and ✅ longer chains. Only when it doesn't know: ❓ back, or with several ❓ in a row a surprise.
-    if (this.asked) {
-      if (pred.top && sure >= p.answerMinSure) {
-        const tok = this.sampleFrom(pred.dist, 0.3, rng);
-        return { tok, m: 'answer', why: { ...base, mode: `continues its pattern (your ❓${this.askStreak > 1 ? ' ×' + this.askStreak : ''})`, top3: this.top3(pred) } };
-      }
-      const pAskSurprise = Math.min(0.85, p.askSurprise * (this.askStreak - 1));
-      if (rng() < pAskSurprise) {
-        return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: `doesn't know: surprise (your ❓ ×${this.askStreak})` } };
-      }
-      return { tok: ASK, why: { ...base, mode: "doesn't know: asks you back", top3: this.top3(pred) } };
-    }
-
-    // 2. sleepy?
+    // 1. tired?
     const e = this.energy / this.capacity;
     if (this.energy <= 0) return { tok: SLEEP, why: { mode: 'falls asleep (no energy left)' } };
     if (e < p.sleepyBelow && rng() < ((p.sleepyBelow - e) / p.sleepyBelow) * 0.35) return { tok: SLEEP, why: { mode: 'nods off (sleepy)' } };
 
-    // 3. you said ❌: try again with something else
-    // The rejected part was taken back, so it answers again what that answered, less tied to its
-    // most likely idea (flatter choice), and sometimes with a surprise.
-    if (this.rejected) {
-      const alt = pred;
-      const why = base;
-      if (rng() < p.retrySurprise) return { tok: this.paletteEmoji(rng, now), m: 'retry', why: { ...why, mode: 'retry after ❌: a surprise' } };
-      const tok = this.sampleFrom(alt.dist, p.retryTemperature, rng, this.rejected);
-      if (tok && (alt.dist.get(tok) || 0) > 0.02) return { tok, m: 'retry', why: { ...why, mode: 'retry after ❌', top3: this.top3(alt, this.rejected) } };
-      return { tok: this.paletteEmoji(rng, now), m: 'retry', why: { ...why, mode: 'retry after ❌: tries something new' } };
-    }
-
-    // 4. reacting to what you did
+    // 2. its own ✓ / ✗ on your real sign
     const ev = this.lastEval;
-    if (ev && !ev.signal) {
-      if (ev.matched && ev.sure > 0.5 && rng() < p.reactYes) return { tok: YES, why: { ...base, mode: 'confirms ✅: you did what it expected' } };
-      if (!ev.matched && ev.sure > 0.6 && rng() < p.reactNo) return { tok: NO, why: { ...base, mode: 'says ❌: it expected something else' } };
-    }
-
-    // 6. next-token prediction: patterns, a bit of chaos, sometimes something new.
-    // The more repetitive the recent conversation, the likelier a totally new, surprising emoji.
-    const T = p.temperature;
-    const rep = this.repetitiveness();
-    const pSurprise = Math.min(0.8, p.repeatNovelty * rep);
-    const pNew = p.noveltyBase + pSurprise;
-    const cands = new Map(); // key -> { p, mode, tok }
-    const add = (key, prob, mode, tok) => {
-      if (prob <= 0) return;
-      const c = cands.get(key);
-      if (c) c.p += prob;
-      else cands.set(key, { p: prob, mode, tok });
-    };
-    let sumT = 0;
-    for (const [, q] of pred.dist) sumT += Math.pow(q, 1 / T);
-    for (const [t, q] of pred.dist) add(t, ((1 - pNew) * pred.conf * Math.pow(q, 1 / T)) / sumT, t === pred.top ? 'pattern' : 'variation', t);
-
-    // no idea (no matching pattern): its general tendency, asking ❓, echoing you, or its seed character
-    const clueless = (1 - pNew) * (1 - pred.conf);
-    let lastPlayer = null;
-    for (let i = this.seq.length - 1; i >= 0 && !lastPlayer; i--) if (this.seqWho[i] === 'P') lastPlayer = this.seq[i];
-    const general = pred.general.size ? 0.45 : 0;
-    add('⟨general⟩', clueless * general, 'general', null);
-    add(ASK, clueless * 0.3 * (this.lastCreatureAsk ? 0.4 : 1), 'ask', ASK);
-    if (lastPlayer) add(lastPlayer, clueless * 0.15, 'echo', lastPlayer);
-    if (this.character.length) add('⟨character⟩', clueless * (0.55 - general + (lastPlayer ? 0 : 0.15)), 'character', null);
-    add('⟨new⟩', p.noveltyBase, 'new', null);
-    add('⟨surprise⟩', pSurprise, 'surprise', null);
-
-    // loop avoidance: options that would continue a recent repetition (any length) count less;
-    // the freed share goes to a totally new emoji
-    const loops = this.loopFactors(this.seq, [...cands.values()].map((c) => c.tok).concat([...pred.general.keys()]));
-    let removed = 0;
-    for (const c of cands.values()) {
-      const f = c.tok && loops.get(c.tok);
-      if (f === undefined || f === null) continue;
-      removed += c.p * (1 - f);
-      c.p *= f;
-    }
-    add('⟨surprise⟩', removed, 'surprise', null);
-
-    // never fully predictable: cap the top choice, the excess goes to the other options
-    let total = 0;
-    for (const c of cands.values()) total += c.p;
-    let topKey = null;
-    for (const [k, c] of cands) if (!topKey || c.p > cands.get(topKey).p) topKey = k;
-    if (topKey && cands.get(topKey).p / total > p.maxCertainty) {
-      const topC = cands.get(topKey);
-      const excess = topC.p - p.maxCertainty * total;
-      topC.p -= excess;
-      const others = [...cands].filter(([k]) => k !== topKey);
-      const sumOthers = others.reduce((s, [, c]) => s + c.p, 0);
-      if (sumOthers > 0) for (const [, c] of others) c.p += (excess * c.p) / sumOthers;
-      else add('⟨new⟩', excess, 'new', null);
-    }
-
-    const key = sample([...cands].map(([k, c]) => [k, c.p]), rng);
-    const c = cands.get(key);
-    let tok = c.tok;
-    if (key === '⟨new⟩') tok = this.paletteEmoji(rng, now);
-    else if (key === '⟨general⟩') {
-      const g = new Map([...pred.general].map(([t, q]) => [t, q * (loops.get(t) ?? 1)]));
-      tok = this.sampleFrom(g, T, rng);
-    }
-    else if (key === '⟨character⟩') tok = pick(this.character, rng);
-    else if (key === '⟨surprise⟩') tok = this.paletteEmoji(rng, now);
-    const top3 = [...cands.values()]
-      .sort((a, b) => b.p - a.p)
-      .slice(0, 3)
-      .map((x) => [x.tok || x.mode, x.p / total]);
-    return { tok, m: tok === ASK ? undefined : c.mode, why: { ...base, mode: c.mode, top3, repetition: rep } };
-  }
-
-  /**
-   * Loop avoidance. For each candidate that occurs in the recent window: how often would choosing it
-   * repeat what just happened? Counts earlier occurrences of the 2…6-emoji sequence it would complete
-   * (pairs from their 2nd occurrence), plus (beyond 2) how often the emoji itself is among the last 12. Returns emoji -> factor e^(−s·count)
-   * (only for factors < 1).
-   */
-  loopFactors(seq, candidates) {
-    const p = this.p;
-    const out = new Map();
-    if (!p.loopStrength || seq.length < 1) return out;
-    const w = seq.slice(-p.loopWindow);
-    const inWindow = new Set(w);
-    const last12 = seq.slice(-12);
-    for (const t of new Set(candidates)) {
-      if (!t || !inWindow.has(t)) continue;
-      let rep = 0;
-      for (let n = 2; n <= 6 && n - 1 <= w.length; n++) {
-        // the n-emoji sequence that choosing t would complete: last n−1 emojis + t
-        const head = w.slice(w.length - (n - 1));
-        let occ = 0;
-        for (let i = 0; i + n <= w.length; i++) {
-          let match = w[i + n - 1] === t;
-          for (let j = 0; match && j < n - 1; j++) match = w[i + j] === head[j];
-          if (match) occ++;
-        }
-        // a pair seen once before is just consistency (answering the same thing again); it counts from
-        // the second time. Longer sequences count right away (a loop always repeats those too).
-        rep += n === 2 ? Math.max(0, occ - 1) : occ;
+    if (this.lastPlayer === 'sign' && ev) {
+      if (ev.p >= p.reactYesAt && rng() < p.reactYes) return { tok: YES, why: { ...base, mode: `✓: it expected your ${ev.tok} (${pct(ev.p)})` } };
+      if (ev.top && ev.top !== ev.tok && ev.pTop >= p.reactNoTop && ev.p < p.reactNoBelow && rng() < p.reactNo) {
+        return { tok: NO, why: { ...base, mode: `✗: it expected ${ev.top} (${pct(ev.pTop)}), not ${ev.tok} (${pct(ev.p)})` } };
       }
-      let same = 0;
-      for (const e of last12) if (e === t) same++;
-      rep += Math.max(0, same - 2) * 0.5;
-      if (rep > 0) out.set(t, Math.exp(-p.loopStrength * rep));
+      if (rng() < p.reactBase) return { tok: ev.p > 0 ? YES : NO, why: { ...base, mode: `${ev.p > 0 ? '✓' : '✗'} (a rare reaction)` } };
     }
-    return out;
-  }
 
-  /**
-   * How repetitive the recent conversation is, 0…1: the larger of
-   * - the share of 3-emoji sequences in the last 20 emojis that already occurred there
-   * - how much one emoji dominates the last 12 (one emoji in 1 of 4 is normal, all of them = 1)
-   */
-  repetitiveness() {
-    const w = this.seq.slice(-this.p.loopWindow);
-    if (w.length < 6) return 0;
-    const seen = new Set();
-    let rep = 0;
-    for (let i = 2; i < w.length; i++) {
-      const key = w[i - 2] + SEP + w[i - 1] + SEP + w[i];
-      if (seen.has(key)) rep++;
-      seen.add(key);
+    // 3. its ☐
+    const wc = this.waitChance(ex.probs);
+    if (rng() < wc) return { tok: ASK, why: { ...base, mode: `☐ waits (${pct(wc)}${wc > p.waitBase ? ': unsure between its top two' : ''})` } };
+
+    // 4. surprise
+    if (rng() < sp.total) return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: `surprise (${pct(sp.total)})` } };
+
+    // 5. its expectation, or with none its seed
+    if (ex.probs.length) {
+      const tok = sample(ex.probs, rng);
+      return { tok, m: 'expect', why: { ...base, mode: `expectation (${pct(ex.probs.find(([s]) => s === tok)[1])})` } };
     }
-    const pattern = rep / (w.length - 2);
-    const last = this.seq.slice(-12);
-    const counts = new Map();
-    for (const e of last) counts.set(e, (counts.get(e) || 0) + 1);
-    const top = Math.max(...counts.values()) / last.length;
-    const symbol = Math.max(0, (top - 0.25) / 0.75);
-    return Math.min(1, Math.max(pattern, symbol));
+    if (this.seats.length && rng() < p.seedWhenClueless) return { tok: this.familiar(rng), m: 'seed', why: { ...base, mode: 'no expectation: one of its familiar signs' } };
+    return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: 'no expectation: a surprise' } };
   }
 
   // ───────────────────────── sleep ─────────────────────────
@@ -429,150 +332,36 @@ export class Mind {
     const duration = missing / rate;
     const interval = this.p.dreamIntervalSec * 1000;
     const count = Math.max(3, Math.ceil(duration / interval));
-    this.sleep = { start: t, count, interval, dream: this.dream(count), rate, restedAt: t + duration, energyAtStart };
+    this.sleep = { start: t, count, interval, dream: this.dream(count, t, interval), rate, restedAt: t + duration, energyAtStart };
     this.awake = false;
     this.turn = null;
-    this.question = false;
-    this.asked = false;
-    this.rejected = null;
-    this.notThat = null;
-    this.chain = [];
+    this.lastPlayer = null;
     this.lastEval = null;
+    this.reaction = null;
+    this.rejected = [];
+    this.armed = false;
+    this.waitStreak = 0;
     this.sleepCount++;
   }
 
   /**
-   * The dream: a string of next-token predictions continuing from the whole conversation so far.
+   * The dream: it answers itself with the same rules (votes, repetition surprise), without ✓ ✗ ☐.
    * Not stored; regenerated from the seed. Learned on waking (as far as it got).
    */
-  dream(count) {
+  dream(count, t0, interval) {
     const rng = rngFor(this.seed, 'dream', this.sleepCount);
-    const ctx = this.context();
-    const recent = this.seq.slice(-this.p.loopWindow); // the dream's own recent emojis (for loop avoidance)
+    const toks = this.seq.map((x) => x.tok);
     const out = [];
     for (let i = 0; i < count; i++) {
-      const pr = this.mem.predict(ctx);
-      const mix = new Map();
-      for (const [t, q] of pr.dist) mix.set(t, pr.conf * q);
-      for (const [t, q] of pr.general) mix.set(t, (mix.get(t) || 0) + (1 - pr.conf) * q);
-      // loop avoidance in dreams too: the freed share goes to other emojis it knows (general tendency)
-      const loops = this.loopFactors(recent, [...mix.keys()]);
-      let removed = 0;
-      for (const [t, f] of loops) {
-        removed += mix.get(t) * (1 - f);
-        mix.set(t, mix.get(t) * f);
-      }
-      if (removed > 0) for (const [t, q] of pr.general) mix.set(t, mix.get(t) + removed * q * (loops.get(t) ?? 1));
-      const tok = mix.size ? this.sampleFrom(mix, this.p.dreamTemperature, rng) : null;
+      const ex = this.expect(this.context(toks));
+      let tok;
+      if (rng() < this.surpriseChance(toks, 0).total) tok = this.paletteEmoji(rng, t0 + i * interval);
+      else if (ex.probs.length) tok = sample(ex.probs, rng);
+      else tok = this.seats.length ? this.familiar(rng) : this.paletteEmoji(rng, t0 + i * interval);
       out.push(tok);
-      if (tok) {
-        ctx.push(tok);
-        if (ctx.length > this.p.contextMax) ctx.shift();
-        recent.push(tok);
-        if (recent.length > this.p.loopWindow) recent.shift();
-      }
+      toks.push(tok);
     }
     return out;
-  }
-
-  // ───────────────────────── complexity & appearance ─────────────────────────
-
-  /**
-   * Complexity: how many different emojis take part in learned patterns, and in how many different
-   * ways. Every learned pair ("after a comes b", ≥ 20% of what followed, really happened ≥ repsToLearn×
-   * or got ✅) counts
-   * for both emojis. A longer pattern counts only where the longer context changes the answer.
-   * Score = Σ over emojis of log2(1 + number of different patterns it's part of). Random spam forms
-   * no learned patterns, so it adds nothing.
-   * Returns { score, signs, variety: emoji -> count, strength: emoji -> summed pattern strength }.
-   * Strength of a pattern = log2(1 + w / strengthScale): it grows with ✅ and shrinks with ❌, but each
-   * doubling of the weight adds the same, so long-established patterns can't run away and newer,
-   * often reinforced ones can catch up.
-   * "Most varied" and the look's blend are ranked by strength.
-   */
-  complexity() {
-    if (this._cx && this._cx.version === this.mem.version) return this._cx.value;
-    const p = this.p;
-    const minW = p.repsToLearn * 0.75;
-    const variety = new Map(); // emoji -> Map(pattern key -> strength)
-    const note = (e, key, w) => {
-      if (!variety.has(e)) variety.set(e, new Map());
-      variety.get(e).set(key, Math.log2(1 + w / p.strengthScale));
-    };
-    const minN = Math.max(2, Math.round(p.repsToLearn)); // it must really have happened repeatedly
-    for (const x of this.mem.learned(1, 0.2, minW, minN)) {
-      note(x.ctx[0], '→' + x.next, x.w);
-      note(x.next, '←' + x.ctx[0], x.w);
-    }
-    for (let L = 2; L <= p.contextMax; L++) {
-      for (const x of this.mem.learned(L, 0.2, minW, minN)) {
-        if (this.mem.topAfter(x.ctx[x.ctx.length - 1]) === x.next) continue; // says nothing new
-        const key = 'ctx:' + x.ctx.join(SEP) + '→' + x.next;
-        for (const e of new Set([...x.ctx, x.next])) note(e, key, x.w);
-      }
-    }
-    let score = 0;
-    const counts = new Map();
-    const strength = new Map();
-    for (const [e, pats] of variety) {
-      counts.set(e, pats.size);
-      strength.set(e, [...pats.values()].reduce((a, b) => a + b, 0));
-      score += Math.log2(1 + pats.size);
-    }
-    const value = { score, signs: variety.size, variety: counts, strength };
-    this._cx = { version: this.mem.version, value };
-    return value;
-  }
-
-  /**
-   * Appearance basis (graphics come later). Each slot (face, extremities, hair/hat, object) has
-   * continuous traits: shape, size, texture (0…1) and a hue. Every emoji carries its own fixed trait
-   * values; the creature's traits are a blend of the emojis that weigh most in its learned patterns.
-   * So a small change in its patterns changes the look a little, a big change a lot. After each sleep
-   * the look moves lookFollow (half) of the way to that blend, so even big changes take a few nights.
-   * Slots fade in with complexity (presence 0…1). Before it has learned anything, its seed character
-   * is the blend.
-   */
-  updateLook() {
-    const p = this.p;
-    const { strength, score } = this.complexity();
-    let ranked = [...strength].sort((a, b) => b[1] - a[1]).slice(0, p.lookTop);
-    if (!ranked.length) ranked = this.character.map((e) => [e, 1]);
-    // sharpened shares: the strongest emojis dominate, the rest still count a little
-    const sq = ranked.map(([e, w]) => [e, w * w]);
-    const sum = sq.reduce((a, [, w]) => a + w, 0) || 1;
-    const mix = sq.map(([e, w]) => [e, w / sum]);
-    const spread = Math.sqrt(mix.reduce((a, [, q]) => a + q * q, 0)) || 1;
-    const u = (slot, trait, e) => hashString(`look:${slot}:${trait}:${e}`) / 4294967296; // fixed per emoji, 0…1
-    const follow = Object.keys(this.look).length ? p.lookFollow : 1;
-    const look = {};
-    LOOK_SLOTS.forEach((slot, i) => {
-      const target = {};
-      for (const trait of LOOK_TRAITS) {
-        // weighted mean, rescaled so a blend of many emojis varies as much as a single one would
-        const m = mix.reduce((a, [e, q]) => a + q * u(slot, trait, e), 0);
-        target[trait] = Math.min(1, Math.max(0, 0.5 + (m - 0.5) / spread));
-      }
-      let x = 0;
-      let y = 0;
-      for (const [e, q] of mix) {
-        const a = u(slot, 'hue', e) * 2 * Math.PI;
-        x += q * Math.cos(a);
-        y += q * Math.sin(a);
-      }
-      target.hue = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-      const th = p.lookUnlock[i];
-      target.presence = th <= 0 ? 1 : Math.min(1, Math.max(0, (score - th) / th));
-      const cur = this.look[slot] || target;
-      const o = {};
-      for (const k of [...LOOK_TRAITS, 'presence']) o[k] = +(cur[k] + follow * (target[k] - cur[k])).toFixed(3);
-      const dh = ((target.hue - cur.hue + 540) % 360) - 180; // the short way round the colour wheel
-      o.hue = Math.round((cur.hue + follow * dh + 360) % 360);
-      o.color = `hsl(${o.hue} 60% 80%)`;
-      look[slot] = o;
-    });
-    this.look = look;
-    this.lookMix = mix.map(([e, q]) => [e, +q.toFixed(3)]);
   }
 
   isRested(now) {
@@ -593,23 +382,63 @@ export class Mind {
 
   wakeUp(t) {
     if (this.sleep) {
-      // learn from the dream, as far as it got: patterns that came up in the dream get stronger
+      // learn from the dream, as far as it got (sleep consolidates)
       const s = this.sleep;
       const n = Math.min(s.count, Math.floor((t - s.start) / s.interval) + 1);
-      const ctx = this.context();
+      const toks = this.seq.map((x) => x.tok);
       for (const tok of s.dream.slice(0, n)) {
-        if (!tok) continue;
-        this.mem.learn(ctx, tok, this.p.dreamWeight, false);
-        ctx.push(tok);
-        if (ctx.length > this.p.contextMax) ctx.shift();
+        this.assoc.add(this.context(toks), tok, this.p.dreamWeight);
+        toks.push(tok);
       }
       this.stats.dreamLearned = n;
       this.energy = this.energyAt(t);
-      this.updateLook(); // its look changes (if at all) while it sleeps
+      this.updateSeats(); // its look changes (if at all) while it sleeps
     }
     this.sleep = null;
     this.awake = true;
     this.turn = 'C';
     this.sessionInputs = 0;
+  }
+
+  // ───────────────────────── top signs → seats ─────────────────────────
+
+  /** Its signs ranked by use in its last outputWindow outputs (ties: the more recently used). */
+  topSigns() {
+    const recent = this.outputs.slice(-this.p.outputWindow);
+    const c = new Map();
+    recent.forEach((o, i) => c.set(o.tok, { tok: o.tok, uses: (c.get(o.tok)?.uses || 0) + 1, last: i }));
+    return [...c.values()].sort((a, b) => b.uses - a.uses || b.last - a.last);
+  }
+
+  /**
+   * The top signs hold seats (segments). A seat belongs to its sign, not its rank: when a new sign
+   * enters the top, it takes the seat of the one it dethroned (the least used one that dropped out).
+   * Seats without a top sign keep their seed sign.
+   */
+  updateSeats() {
+    const p = this.p;
+    const ranked = this.topSigns();
+    const uses = new Map(ranked.map((r) => [r.tok, r.uses]));
+    const top = ranked.slice(0, p.seats).map((r) => r.tok);
+    if (!this.seats.length) {
+      const first = [...top, ...this.character.filter((c) => !top.includes(c))].slice(0, p.seats);
+      this.seats = first.map((tok, i) => this.makeSeat(i, tok));
+    }
+    const holders = this.seats.map((s) => s.tok);
+    const entrants = top.filter((t) => !holders.includes(t));
+    const free = this.seats
+      .map((s, i) => [i, s.tok])
+      .filter(([, tok]) => !top.includes(tok))
+      .sort((a, b) => (uses.get(a[1]) || 0) - (uses.get(b[1]) || 0))
+      .map(([i]) => i);
+    entrants.forEach((tok, j) => {
+      if (j < free.length) this.seats[free[j]] = this.makeSeat(free[j], tok);
+    });
+    for (const s of this.seats) s.uses = uses.get(s.tok) || 0;
+  }
+
+  makeSeat(i, tok) {
+    const hue = hashString('hue:' + tok) % 360;
+    return { seat: SEATS[i], tok, style: hashString(`style:${SEATS[i]}:${tok}`) % 8, hue, color: `hsl(${hue} 60% 80%)`, uses: 0 };
   }
 }

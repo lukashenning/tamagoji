@@ -1,58 +1,56 @@
-// All tunable numbers in one place. See docs/07-simple-core.md.
+// All tunable numbers in one place. See docs/08-sign-engine.md.
 
-export const ENGINE_VERSION = '0.13.0';
+export const ENGINE_VERSION = '1.0.0-exp';
 
 export const DEFAULT_PARAMS = {
-  // pattern memory
-  contextMax: 6, // longest sequence of previous emojis it looks at
-  repsToLearn: 3, // repetitions until a pattern is "confident" (~75%)
-  memoryHalfLife: 2000, // conversation emojis until an old pattern counts half (recent counts more)
-  questionBoost: 3, // your answer to its ❓ counts this much
+  // associations
+  levels: 4, // context lengths 1…4
+  levelGrowth: 2, // level weights 1, 2, 4, 8: each longer context counts double
+  repeatWeight: 1, // each use of a sign after a context adds this to the link
+  temperature: 3, // chaos: how strongly more votes win (higher = more even)
 
-  // reinforcement
-  // ✅ / ❌ act on the reaction: its emoji's link to the emoji it answered and to the sequence it answered
-  yesWeight: 2, // ✅: those links +2
-  noFactor: 0.5, // ❌: those links × 0.5 …
-  noWeight: 0.5, // … and −0.5 (so one ❌ clearly lowers the chance, even for a strong habit)
-  retryTemperature: 1.6, // its answer after ❌: a flatter choice, less tied to its most likely idea
-  retrySurprise: 0.3, // … and 30% a surprise from the hourly keyboard set
-  notThatWeight: 4, // ✅ right after ❌: what it said since the ❌ is linked (+4) to what came before the rejected part
+  // ✓ / ✗ (yours and its own) on the last real sign's links
+  yesWeight: 3,
+  noWeight: 3,
 
-  // behaviour
-  temperature: 0.8, // chaos
-  maxCertainty: 0.85, // no choice is ever more likely than this
-  // loop avoidance (awake and in dreams): for each possible next emoji, count how often the sequence it
-  // would complete (2, 3, … 6 emojis long) already occurred among the recent emojis, plus how often the
-  // emoji itself already occurs in the last 12 (beyond 2). That option counts × e^(−strength × count).
-  // Awake, the freed share goes to a totally new emoji; in dreams, to other emojis it knows.
-  loopStrength: 0.7, // 0 = off
-  loopWindow: 20, // "recent" = the last this many emojis
-  noveltyBase: 0.04, // chance to try a new emoji
-  repeatNovelty: 0.7, // extra chance of a totally new emoji, × how repetitive the recent conversation is
-  reactYes: 0.25, // chance it confirms ✅ when you did what it confidently expected
-  reactNo: 0.3, // chance it says ❌ when you broke a confident expectation
-  answerMinSure: 0.25, // your ❓: below this certainty it asks back instead of guessing
-  askSurprise: 0.35, // each further ❓ of yours in a row adds this chance of a totally new emoji
+  // its own ✓ / ✗ right after your real sign
+  reactYes: 0.2, // when your sign had been at least reactYesAt expected
+  reactYesAt: 0.5,
+  reactNo: 0.25, // when it expected something else at ≥ reactNoTop and yours was below reactNoBelow
+  reactNoTop: 0.6,
+  reactNoBelow: 0.1,
+  reactBase: 0.02, // otherwise, rarely
+
+  // its ☐ (wait): base chance, rising to waitMax when its top two expectations are within waitClose
+  waitBase: 0.05,
+  waitMax: 0.25,
+  waitClose: 0.05,
+
+  // surprise: a random emoji from this hour's keyboard set
+  surpriseBase: 0.1, // always at least this
+  repeatSurprise: 0.16, // × repetition pressure (max over k of m / k²)
+  waitSurpriseFrom: 4, // your ☐ in a row from which waiting makes it playful
+  waitSurprise: 0.05, // … + this per further ☐
+  waitSurpriseMax: 0.4,
+  surpriseMax: 0.7,
+  seedWhenClueless: 0.7, // no expectation at all: one of its familiar (seat) signs (else a surprise)
 
   // energy & sleep
-  capacity: 80, // player inputs until tired (~6 min)
+  capacity: 80, // inputs until tired (~6 min)
   sleepyBelow: 0.25, // energy fraction where nodding off can start
   idleSleepMin: 2, // falls asleep when left alone this long
   fullRecoveryMin: 60, // empty → full; energy recovers steadily while sleeping
-  dreamIntervalSec: 3, // one dream emoji every few seconds
-  dreamWeight: 0.01, // how much each dreamed emoji is learned on waking (full sleep ≈ 1200 × 0.01)
-  dreamTemperature: 0.9,
+  dreamIntervalSec: 3, // one dream sign every few seconds
+  dreamWeight: 0.1, // each dreamed sign is learned this much on waking
   wakeDelaySec: [2, 20],
   replyDelaySec: [0.6, 1.5],
 
-  // seed character: a few emojis it babbles while it knows nothing (and its first look)
+  // seed: random emojis it is born with (its first seats)
   characterSize: 6,
 
-  // appearance basis (docs/07): which emojis define its face, extremities, hair/hat and object
-  lookUnlock: [0, 4, 10, 20], // slots 2–4 fade in from this complexity, fully there at twice it
-  strengthScale: 4, // a pattern's strength = log2(1 + w / 4): weight 4 → 1, 12 → 2, 28 → 3, 60 → 4 …
-  lookTop: 8, // the look is blended from the 8 emojis that weigh most in its patterns
-  lookFollow: 0.5, // after each sleep the look moves halfway to the new blend (gradual change)
+  // top signs → seats (look) and voice
+  outputWindow: 1000, // ranked by use in its last this many outputs
+  seats: 6,
 
   // too tired: while asleep with low energy your sign only sometimes wakes it
   tiredBelow: 0.1, // below this energy it never wakes from a sign
@@ -64,10 +62,11 @@ export const DEFAULT_PARAMS = {
 
 // Sliders shown in the test panel.
 export const SLIDERS = [
-  { key: 'repsToLearn', label: 'learning speed (reps to learn)', min: 1, max: 8, step: 1 },
-  { key: 'temperature', label: 'chaos', min: 0.2, max: 2, step: 0.1 },
-  { key: 'noveltyBase', label: 'novelty', min: 0, max: 0.3, step: 0.01 },
-  { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.05, step: 0.005 },
-  { key: 'loopStrength', label: 'loop avoidance (0 = off)', min: 0, max: 2, step: 0.1 },
-  { key: 'repeatNovelty', label: 'surprise when repetitive', min: 0, max: 1.5, step: 0.05 },
+  { key: 'temperature', label: 'chaos', min: 0.5, max: 8, step: 0.5 },
+  { key: 'levelGrowth', label: 'longer contexts count (× per level)', min: 1, max: 4, step: 0.25 },
+  { key: 'yesWeight', label: '✓ strength', min: 0, max: 10, step: 0.5 },
+  { key: 'noWeight', label: '✗ strength', min: 0, max: 10, step: 0.5 },
+  { key: 'surpriseBase', label: 'base surprise', min: 0, max: 0.5, step: 0.01 },
+  { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.5, step: 0.01 },
+  { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.5, step: 0.05 },
 ];
