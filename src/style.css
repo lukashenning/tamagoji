@@ -137,17 +137,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .kb-grid {
   display: grid;
-  grid-template-columns: repeat(5, 34px);
-  grid-auto-rows: 34px;
-  gap: 1px;
+  grid-template-columns: repeat(4, 42px);
+  grid-auto-rows: 42px;
+  gap: 2px;
   min-height: 174px;
 }
 .em {
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 25px/1 var(--emoji);
-  border-radius: 8px;
+  font: 31px/1 var(--emoji);
+  border-radius: 10px;
   cursor: pointer;
   -webkit-user-drag: none;
   transition: opacity 0.2s;

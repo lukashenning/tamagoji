@@ -51,7 +51,7 @@ For the current context, each level votes for the signs that followed that conte
    - otherwise 2% (✓ if your sign was among its expectations, else ✗).
    Its ✓ / ✗ strengthens (+3) or weakens (−3) the link of your sign to what came before it, like yours.
 3. **☐ (wait)**: 5% base, rising to 25% when its top two expectations are within 5 points.
-4. **Surprise**: a random emoji from this hour's keyboard set (unused ones first). Chance:
+4. **Surprise**: a random emoji from this hour's keyboard set (16 emojis; unused ones first). Chance:
    - always at least **10%**,
    - **+ repetition**: for a pattern of length k (1–4) repeating at the end of the real signs
      (☐ ✓ ✗ ignored), m = how many signs at the end repeat the sign k places earlier.
