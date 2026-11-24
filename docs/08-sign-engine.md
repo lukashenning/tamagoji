@@ -73,6 +73,11 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
   signs *before* A. `A ✗ B ✗ C ✓` takes back A and B. A keeps its ✗ weakening. Anything else in
   between (your real sign or ☐, its ☐ or reaction) ends this.
 
+## Sleep
+
+Left alone for 2 minutes it falls asleep (also when its energy is still high: then it's a short nap,
+at least ~3 min). When it wakes up, by itself or woken by you, it **waits for you** and says nothing.
+
 ## Dreams
 
 It answers itself with the same rules (votes, repetition surprise), without ✓ ✗ ☐. On waking, the

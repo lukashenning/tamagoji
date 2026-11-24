@@ -236,6 +236,18 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
   check('newborn uses its seed; dreams learned on waking', seedOk && m.stats.dreamLearned > 500 && m.assoc.version > before, `seed signs used: ${[...seeds].join('')} · dream starts ${dreamed} · learned ${m.stats.dreamLearned} dreamed signs`);
 }
 
+// 11b. waking up (by itself or by you), it waits for you instead of saying something
+{
+  const { m, o, t } = fresh(14);
+  demo(o, ['🌞']);
+  o('C', '🌻');
+  m.energy = m.capacity;
+  o('S', SLEEP);
+  t.v += 4 * MIN;
+  o('S', WAKE);
+  check('after waking it waits for you', m.awake && m.turn === 'P', `turn after waking: ${m.turn === 'P' ? 'yours' : 'its'}`);
+}
+
 // 12. seats: a newborn's seats are its seed; a new top-6 sign takes the seat of the one it dethroned
 {
   const { m, o, t } = fresh(12);

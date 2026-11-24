@@ -396,7 +396,7 @@ export class Mind {
     }
     this.sleep = null;
     this.awake = true;
-    this.turn = 'C';
+    this.turn = 'P'; // awake again, it waits quietly for you (no sign, no melody out of the blue)
     this.sessionInputs = 0;
   }
 
