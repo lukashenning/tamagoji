@@ -157,23 +157,29 @@ function lastEntry(who) {
   return null;
 }
 
-/** What the bottom-right indicator shows for your last input: after your ✗, the real sign it acted on
- * (the last real sign before it), so you see what you rejected and what "not that, this" will replace. */
+/** What the bottom-right indicator shows for your last input. While your inputs are ✗ in a row, it
+ * stays on the sign the *first* ✗ rejected (what "not that, this" will replace), until you send
+ * something other than ✗. */
 function yourIndicator() {
   const h = s.save.history;
+  let first = -1; // the first ✗ of your current run of ✗
   for (let i = h.length - 1; i >= 0; i--) {
     const e = h[i];
-    if (e.tok === SLEEP || e.tok === WAKE) return '';
+    if (e.tok === SLEEP || e.tok === WAKE || e.tok === BIRTH) break;
     if (e.who !== 'P') continue;
-    if (e.tok !== NO) return e.tok;
-    for (let j = i - 1; j >= 0; j--) {
-      const x = h[j];
-      if (x.tok === SLEEP || x.tok === WAKE || x.tok === BIRTH) return e.tok;
-      if (!ELEMENTALS.includes(x.tok) && !s.mind.takenBack.has(j)) return x.tok;
+    if (e.tok !== NO) {
+      if (first < 0) return e.tok; // your last input wasn't ✗
+      break;
     }
-    return e.tok;
+    first = i;
   }
-  return '';
+  if (first < 0) return '';
+  for (let j = first - 1; j >= 0; j--) {
+    const x = h[j];
+    if (x.tok === SLEEP || x.tok === WAKE || x.tok === BIRTH) break;
+    if (!ELEMENTALS.includes(x.tok) && !s.mind.takenBack.has(j)) return x.tok;
+  }
+  return NO;
 }
 
 // dreaming: each new dream emoji rises straight up from its head, growing as it goes.
