@@ -39,15 +39,16 @@ export function buildPalette(root, { onPick }) {
       random.innerHTML = cells(list.map((tok) => ({ tok })));
     },
     /**
-     * "Zu müde...": all keys show 💤; `progress` 0…1 hides them one by one in a random order (a new
-     * order each time it starts), so at 1 all are gone. Afterwards the normal keys come back.
+     * "Zu müde...": all keys show 💤; `progress` 0…1 hides them one by one like a draining bar
+     * (bottom row from the right, then upwards), so at 1 all are gone. Then the normal keys come back.
      */
     setSleepy(progress) {
       if (!sleepy) {
-        const order = [...Array(32).keys()];
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [order[i], order[j]] = [order[j], order[i]];
+        // like a draining bar across both halves (4 rows × 8 columns): bottom row first, right to
+        // left, then the row above. Left half = cells 0–15, right half = 16–31 (4 per row).
+        const order = [];
+        for (let row = 3; row >= 0; row--) {
+          for (let col = 7; col >= 0; col--) order.push(col >= 4 ? 16 + row * 4 + (col - 4) : row * 4 + col);
         }
         sleepy = { order, shown: -1 };
         lastRecent = lastRandom = ''; // the normal keys are redrawn afterwards
