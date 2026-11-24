@@ -86,7 +86,7 @@ function play(seed, steps) {
         if (before.lastPlayer !== 'sign') flag('its ✓/✗ only right after your real sign', `${tok} after ${before.lastPlayer}`);
         const ev = before.ev;
         if (tok === YES && ev && ev.p === 0) flag('its ✓ only for a sign it expected', `${tok} p=${ev.p}`);
-        if (tok === NO && ev && ev.p >= P.reactYesAt) flag('no ✗ for a sign it expected ≥ 50%', `${tok} for ${ev.tok} p=${pct(ev.p)} · top ${ev.top} ${pct(ev.pTop)} · why: ${d.why.mode}`);
+        if (tok === NO && ev && ev.p >= P.reactYesAt) flag('no ✗ for a sign it expected enough for a ✓', `${tok} for ${ev.tok} p=${pct(ev.p)} · top ${ev.top} ${pct(ev.pTop)} · why: ${d.why.mode}`);
         if (tok === NO && ev && ev.p > 0 && !(ev.top !== ev.tok && ev.pTop >= P.reactNoTop && ev.p < P.reactNoBelow)) flag('its ✗ for an expected sign only when it strongly expected another', `p=${pct(ev.p)} top ${pct(ev.pTop)} · ${d.why.mode}`);
       }
       if (tok === ASK && before.lastPlayer === ASK) flag('no ☐ right after your ☐', '');
@@ -145,7 +145,7 @@ log('Rule checks:');
 const rules = [
   'its ✓/✗ only right after your real sign',
   'its ✓ only for a sign it expected',
-  'no ✗ for a sign it expected ≥ 50%',
+  'no ✗ for a sign it expected enough for a ✓',
   'its ✗ for an expected sign only when it strongly expected another',
   'no ☐ right after your ☐',
   'surprises come from the hourly set',
@@ -168,7 +168,7 @@ for (const [r, p] of problems) if (!rules.includes(r)) log(`FAIL ${r} — ${p.n}
 
 const total = Object.values(stats.creature).reduce((a, b) => a + b, 0);
 log('\nIts moves: ' + Object.entries(stats.creature).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${pct(n / total)}`).join(' · '));
-log(`Its ✓: ${stats.reactYes[0]} (chances where your sign was ≥ 50% expected: ${stats.reactYes[1]}) · its ✗: ${stats.reactNo[0]} (chances where it strongly expected another: ${stats.reactNo[1]})`);
+log(`Its ✓: ${stats.reactYes[0]} (chances where your sign was ≥ 40% expected: ${stats.reactYes[1]}) · its ✗: ${stats.reactNo[0]} (chances where it strongly expected another: ${stats.reactNo[1]})`);
 log(`"Not that, this": ${stats.takenBack} signs taken back`);
 const avg = (f) => minds.reduce((a, m) => a + f(m), 0) / minds.length;
 log(`Per creature: ${avg((m) => m.assoc.table.size).toFixed(0)} contexts known · ${avg((m) => m.outputs.length).toFixed(0)} outputs · seats e.g. ${minds[0].seats.map((x) => x.tok).join('')} · top ${minds[0].topSigns().slice(0, 8).map((r) => r.tok + r.uses).join(' ')}`);

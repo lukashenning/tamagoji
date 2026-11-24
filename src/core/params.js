@@ -14,8 +14,8 @@ export const DEFAULT_PARAMS = {
   noWeight: 3,
 
   // its own ✓ / ✗ right after your real sign
-  reactYes: 0.2, // when your sign had been at least reactYesAt expected
-  reactYesAt: 0.5,
+  reactYes: 0.35, // when your sign had been at least reactYesAt expected
+  reactYesAt: 0.4,
   reactNo: 0.25, // when it expected something else at ≥ reactNoTop and yours was below reactNoBelow
   reactNoTop: 0.6,
   reactNoBelow: 0.1,
@@ -66,6 +66,7 @@ export const SLIDERS = [
   { key: 'levelGrowth', label: 'longer contexts count (× per level)', min: 1, max: 4, step: 0.25 },
   { key: 'yesWeight', label: '✓ strength', min: 0, max: 10, step: 0.5 },
   { key: 'noWeight', label: '✗ strength', min: 0, max: 10, step: 0.5 },
+  { key: 'reactYes', label: 'its ✓ when you did what it expected', min: 0, max: 1, step: 0.05 },
   { key: 'surpriseBase', label: 'base surprise', min: 0, max: 0.5, step: 0.01 },
   { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.5, step: 0.01 },
   { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.5, step: 0.05 },

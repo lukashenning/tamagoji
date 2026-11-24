@@ -42,7 +42,7 @@ For the current context, each level votes for the signs that followed that conte
 
 1. **Tired?** Falls asleep at no energy; can nod off below 25%.
 2. **React with its own ✓ / ✗** (only right after your real sign):
-   - ✓ 20% if your sign had been at least 50% expected,
+   - ✓ 35% if your sign had been at least 40% expected (slider),
    - ✗ 25% if it expected something else at ≥ 60% and your sign was below 10%,
    - otherwise 2% (✓ if your sign was among its expectations, else ✗).
    Its ✓ / ✗ strengthens (+3) or weakens (−3) the link of your sign to what came before it, like yours.

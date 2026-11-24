@@ -206,15 +206,15 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
     for (let i = 0; i < 4; i++) demo(f.o, ['🍎', '🍐', '🍋', '🍇', '🎈']);
     demo(f.o, ['🍎']);
     const out = [];
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 10 && out.length < 3; k++) {
       const d = f.m.decide(r);
-      out.push(d.tok);
+      if (![YES, NO, ASK].includes(d.tok)) out.push(d.tok); // its ✓ / ☐: you just press ☐ again
       f.o('C', d.tok, d.m);
       f.o('P', ASK);
     }
     if (out.join('') === '🍐🍋🍇') follows++;
   }
-  check('pressing ☐: it chains its learned sequence', follows >= 35, `🍎 then ☐ ☐: whole chain 🍐🍋🍇 in ${follows}% (each step can be a surprise, its ☐ or a reaction)`);
+  check('pressing ☐: it chains its learned sequence', follows >= 50, `🍎 then ☐ ☐ …: its next 3 signs are the whole chain 🍐🍋🍇 in ${follows}% (each can be a surprise)`);
 }
 
 // 11. a newborn (no expectation) uses its seed; dreams are learned at +0.1 on waking
