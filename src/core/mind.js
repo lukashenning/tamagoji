@@ -54,6 +54,7 @@ export class Mind {
     this.rejected = []; // signs ✗'d in a row, taken back by a ✓ after its next sign
     this.armed = false; // it answered your ✗ with a real sign: a ✓ now takes back `rejected`
     this.waitStreak = 0; // your ☐ in a row
+    this.greeting = false; // it woke up by itself: its next move is a surprise sign
     this.lastEffect = null; // what the last ✓ / ✗ did (for the panel)
 
     // top signs → seats (look) and voice
@@ -76,7 +77,7 @@ export class Mind {
     const tok = LEGACY[e.tok] || e.tok;
     if (tok === BIRTH) return this.born(e);
     if (tok === SLEEP) return this.awake && this.fallAsleep(e.t);
-    if (tok === WAKE) return !this.awake && this.wakeUp(e.t);
+    if (tok === WAKE) return !this.awake && this.wakeUp(e.t, e.m !== 'manual');
     if (e.who === 'P') {
       if (isElemental(tok)) this.playerSpecial(tok, e.t);
       else this.playerSign(tok, e.t);
@@ -191,6 +192,7 @@ export class Mind {
 
   /** Its real sign. Not learned by itself; only ✓ / ✗ (and dreams) teach it its own moves. */
   creatureSign(tok) {
+    this.greeting = false;
     const entry = this.push(tok, 'C');
     this.outputs.push({ tok, h: entry.h });
     if (this.rejected.length) this.armed = true;
@@ -200,6 +202,7 @@ export class Mind {
 
   /** Its ✓ / ✗ (on your last real sign, like yours) or its ☐ (acts just like yours: no effect). */
   creatureSpecial(tok) {
+    this.greeting = false;
     this.reaction = null;
     if (tok === YES || tok === NO) {
       const r = this.applyToLast(tok === YES ? this.p.yesWeight : -this.p.noWeight);
@@ -304,6 +307,9 @@ export class Mind {
     if (this.energy <= 0) return { tok: SLEEP, why: { mode: 'falls asleep (no energy left)' } };
     if (e < p.sleepyBelow && rng() < p.nodOffMax * ((p.sleepyBelow - e) / p.sleepyBelow) ** 2) return { tok: SLEEP, why: { mode: `nods off (tired: ${pct(e)} energy)` } };
 
+    // woke up by itself: a sign from the surprise pool
+    if (this.greeting) return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: 'wakes up: a surprise' } };
+
     // 2. its own ✓ / ✗ on your real sign
     const ev = this.lastEval;
     if (this.lastPlayer === 'sign' && ev) {
@@ -388,7 +394,8 @@ export class Mind {
     return Math.min(this.capacity, s.energyAtStart + Math.max(0, now - s.start) * s.rate);
   }
 
-  wakeUp(t) {
+  /** `byItself`: it woke up on its own (rested), not woken by you: it greets you with a surprise sign. */
+  wakeUp(t, byItself = false) {
     if (this.sleep) {
       // learn from the dream, as far as it got (sleep consolidates)
       const s = this.sleep;
@@ -404,7 +411,9 @@ export class Mind {
     }
     this.sleep = null;
     this.awake = true;
-    this.turn = 'P'; // awake again, it waits quietly for you (no sign, no melody out of the blue)
+    // woken by you: it waits for your sign; woke up by itself: it says a surprise sign first
+    this.turn = byItself ? 'C' : 'P';
+    this.greeting = byItself;
     this.sessionInputs = 0;
   }
 

@@ -84,7 +84,8 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
 - **Mid-conversation** it can nod off below 40% energy, the more tired the likelier: per turn of its
   50% × ((40% − energy) / 40%)²: at 30% 3%, at 20% 13%, at 10% 28%; at 0% it falls asleep.
 - **Waking by itself**: once rested (100%), 1–4 s later (while the app is open).
-- When it wakes up, by itself or woken by you, it **waits for you** and says nothing.
+- When it **wakes up by itself**, it greets you with a **surprise** sign (from this hour's set).
+  Woken by you, it waits for your sign.
 - **"Zu müde..."**: your sign wakes it only with an energy-based chance (never below 10%, 70% at 70%,
   always at 100%). If it doesn't wake, the keyboard empties and **10 💤** appear on random keys. Tap
   them all away (or wait until it wakes by itself) to get the keyboard back.

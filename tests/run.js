@@ -233,16 +233,23 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
   check('newborn uses its seed; dreams learned on waking', seedOk && m.stats.dreamLearned > 500 && m.assoc.version > before, `seed signs used: ${[...seeds].join('')} · dream starts ${dreamed} · learned ${m.stats.dreamLearned} dreamed signs`);
 }
 
-// 11b. waking up (by itself or by you), it waits for you instead of saying something
+// 11b. woken by you it waits for your sign; waking up by itself it greets you with a surprise
 {
   const { m, o, t } = fresh(14);
   demo(o, ['🌞']);
   o('C', '🌻');
-  m.energy = m.capacity;
+  m.energy = m.capacity * 0.9;
+  o('S', SLEEP);
+  t.v += 4 * MIN;
+  o('S', WAKE, 'manual');
+  const manual = m.turn;
+  o('P', '🌞');
+  o('C', '🌻');
   o('S', SLEEP);
   t.v += 4 * MIN;
   o('S', WAKE);
-  check('after waking it waits for you', m.awake && m.turn === 'P', `turn after waking: ${m.turn === 'P' ? 'yours' : 'its'}`);
+  const d = m.decide(mulberry32(3), t.v);
+  check('woken by you it waits; awake by itself it greets with a surprise', manual === 'P' && m.turn === 'C' && d.m === 'surprise' && hourlySet(m.seed, t.v).includes(d.tok), `woken by you: ${manual === 'P' ? 'your turn' : 'its turn'} · by itself: ${d.tok} (${d.why.mode})`);
 }
 
 // 12. seats: a newborn's seats are its seed; a new top-6 sign takes the seat of the one it dethroned

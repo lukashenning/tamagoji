@@ -71,7 +71,7 @@ function play(seed, steps) {
       const dream = m.sleep.dream;
       if (dream.some((x) => !x || isElemental(x))) flag('dreams contain only real signs', dream.join(''));
       o({ t, who: 'S', tok: WAKE });
-      if (m.turn !== 'P') flag('after waking it waits for you', m.turn);
+      if (m.turn !== 'C' || !m.greeting) flag('waking up by itself it greets you', m.turn);
       last = null;
       continue;
     }
@@ -157,7 +157,7 @@ const rules = [
   'energy within capacity',
   '6 distinct seats',
   'dreams contain only real signs',
-  'after waking it waits for you',
+  'waking up by itself it greets you',
   'replay rebuilds the same mind',
 ];
 for (const r of rules) {
