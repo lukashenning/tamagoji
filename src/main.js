@@ -3,7 +3,7 @@
 
 import { Mind, wakeChance } from './core/mind.js';
 import { ENGINE_VERSION } from './core/params.js';
-import { SLEEP, WAKE, ASK, ELEMENTALS, isContent } from './core/tokens.js';
+import { SLEEP, WAKE, BIRTH, NO, ASK, ELEMENTALS, isContent } from './core/tokens.js';
 import { recentEmojis, hourlySet, hourLabel } from './core/keyboard.js';
 import { voiceFor, ARCHETYPES } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
@@ -157,6 +157,25 @@ function lastEntry(who) {
   return null;
 }
 
+/** What the bottom-right indicator shows for your last input: after your ✗, the real sign it acted on
+ * (the last real sign before it), so you see what you rejected and what "not that, this" will replace. */
+function yourIndicator() {
+  const h = s.save.history;
+  for (let i = h.length - 1; i >= 0; i--) {
+    const e = h[i];
+    if (e.tok === SLEEP || e.tok === WAKE) return '';
+    if (e.who !== 'P') continue;
+    if (e.tok !== NO) return e.tok;
+    for (let j = i - 1; j >= 0; j--) {
+      const x = h[j];
+      if (x.tok === SLEEP || x.tok === WAKE || x.tok === BIRTH) return e.tok;
+      if (!ELEMENTALS.includes(x.tok) && !s.mind.takenBack.has(j)) return x.tok;
+    }
+    return e.tok;
+  }
+  return '';
+}
+
 // dreaming: each new dream emoji rises straight up from its head, growing as it goes.
 // Rising speed follows the pace of the dreams: the shorter the time between dream emojis, the faster
 // all of them rise (and they slow down again when the dreams come slower), so about 3 are visible.
@@ -232,12 +251,11 @@ function render() {
   } else {
     if (flying.length) clearDreams(); // woke up: dreams vanish
     const c = lastEntry('C');
-    const p = lastEntry('P');
     el.bubble.className = 'bubble' + (m.turn === 'C' ? ' faded' : '') + (c ? '' : ' empty');
     el.bubbleEmoji.textContent = c ? c.tok : '';
     el.bubbleMark.textContent = '';
     el.label.textContent = m.label();
-    el.you.textContent = p ? p.tok : '';
+    el.you.textContent = yourIndicator();
   }
 
   // keyboard: "Zuletzt" (pinned signs + most recent emojis) | the hour's random set ("16 Uhr")
