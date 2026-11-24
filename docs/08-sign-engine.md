@@ -42,9 +42,10 @@ For the current context, each level votes for the signs that followed that conte
 
 - **vote = level weight × strength(link)**, strength = log₂(1 + w) (negative links vote against:
   −log₂(1 + |w|)). Repeats keep adding, with diminishing returns (1 → 1, 3 → 2, 7 → 3, 15 → 4).
-- **Level weights double**: 1, 2, 4, 8 (slider). A rare, specific 4-sign context seen twice
-  (8 × 1.58 = 12.7) outvotes a 1-sign link seen 20 times (1 × 4.4). The longer the matching
-  context, the more it says.
+- **Level weights grow ×1.5 per level**: 1, 1.5, 2.25, 3.4 (slider; D69, was ×2). A sign learned
+  after a whole 4-sign chain B U E A (so on all four levels) against one only linked to A, same
+  strength 1: about 10 : 1 in its expectation (was ~100 : 1). The longer the matching context, the
+  more it says, but not overwhelmingly.
 - The votes per sign are added up. Signs with a positive total are its **expectations**; their
   chances come from a softmax (temperature "chaos", default 3): clearly more votes → much likelier,
   never certain.

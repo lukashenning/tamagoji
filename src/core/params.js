@@ -5,7 +5,7 @@ export const ENGINE_VERSION = '1.0.0-exp';
 export const DEFAULT_PARAMS = {
   // associations
   levels: 4, // context lengths 1…4
-  levelGrowth: 2, // level weights 1, 2, 4, 8: each longer context counts double
+  levelGrowth: 1.5, // level weights 1, 1.5, 2.25, 3.4: each longer context counts 1.5×
   repeatWeight: 1, // each use of a sign after a context adds this to the link
   decayPerTurn: 0.03, // while awake, every link drifts this much towards 0 per turn of yours (±3 → 0 in 100 turns)
   temperature: 3, // chaos: how strongly more votes win (higher = more even)
