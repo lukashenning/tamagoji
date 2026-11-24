@@ -235,10 +235,14 @@ function render() {
   }
 
   // keyboard: "Zuletzt" (pinned signs + most recent emojis) | the hour's random set ("16 Uhr")
+  // too tired: every key shows 💤, and they vanish one by one (in random order) until the block ends
   const tired = Date.now() < s.tiredUntil;
   palette.setTitles(tired ? 'Zu müde...' : 'Zuletzt', hourLabel(now));
-  palette.setRecent(ELEMENTALS, recentEmojis(s.save.history));
-  palette.setRandom(hourlySet(s.save.seed, now));
+  if (tired) palette.setSleepy(1 - (s.tiredUntil - Date.now()) / (s.params.tiredBlockSec * 1000));
+  else {
+    palette.setRecent(ELEMENTALS, recentEmojis(s.save.history));
+    palette.setRandom(hourlySet(s.save.seed, now));
+  }
   palette.setLocked(tired || (m.awake && m.turn !== 'P'));
 }
 
