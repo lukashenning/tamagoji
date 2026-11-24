@@ -40,7 +40,7 @@ const s = {
   replyAt: null,
   wakeAt: null,
   dreamShown: -1,
-  tiredUntil: 0, // real time until which input is blocked ("Zu müde...")
+  tired: null, // "Zu müde...": the slots (0–31) that still show a 💤 to tap away, else null
   saveInfo: { bytes: 0, pruned: 0 },
 };
 
@@ -51,7 +51,7 @@ function load(save) {
   s.why = null;
   s.replyAt = s.wakeAt = null;
   s.dreamShown = -1;
-  s.tiredUntil = 0;
+  s.tired = null;
   persist();
 }
 
@@ -83,9 +83,15 @@ function playerSend(tok) {
   const m = s.mind;
   if (!m.awake) {
     // asleep: a sign only sometimes wakes it. Never below 10% energy, 70% at 70% energy, always when full.
-    if (Date.now() < s.tiredUntil) return;
+    if (s.tired) return;
     if (Math.random() >= wakeChance(m.energyAt(now) / m.capacity, s.params)) {
-      s.tiredUntil = Date.now() + s.params.tiredBlockSec * 1000; // "Zu müde..."
+      // "Zu müde...": a few 💤 strewn over the keyboard; tap them all away to get the keys back
+      const slots = [...Array(32).keys()];
+      for (let i = slots.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [slots[i], slots[j]] = [slots[j], slots[i]];
+      }
+      s.tired = new Set(slots.slice(0, s.params.tiredZz));
       render();
       return;
     }
@@ -235,15 +241,16 @@ function render() {
   }
 
   // keyboard: "Zuletzt" (pinned signs + most recent emojis) | the hour's random set ("16 Uhr")
-  // too tired: every key shows 💤, draining like a bar (bottom row from the right, then up) until the block ends
-  const tired = Date.now() < s.tiredUntil;
+  // too tired: tap away the 💤 (or wait until it wakes by itself) to get the keyboard back
+  if (s.tired && m.awake) s.tired = null;
+  const tired = !!s.tired;
   palette.setTitles(tired ? 'Zu müde...' : 'Zuletzt', hourLabel(now));
-  if (tired) palette.setSleepy(1 - (s.tiredUntil - Date.now()) / (s.params.tiredBlockSec * 1000));
+  if (tired) palette.setSleepy(s.tired);
   else {
     palette.setRecent(ELEMENTALS, recentEmojis(s.save.history));
     palette.setRandom(hourlySet(s.save.seed, now));
   }
-  palette.setLocked(tired || (m.awake && m.turn !== 'P'));
+  palette.setLocked(!tired && m.awake && m.turn !== 'P');
 }
 
 // ── panel handlers ──
@@ -312,7 +319,15 @@ const handlers = {
 };
 
 // ── start ──
-const palette = buildPalette(document.getElementById('palette'), { onPick: playerSend });
+const palette = buildPalette(document.getElementById('palette'), {
+  onPick: playerSend,
+  onZz(slot) {
+    if (!s.tired) return;
+    s.tired.delete(slot);
+    if (!s.tired.size) s.tired = null; // all tapped away: the keyboard is back
+    render();
+  },
+});
 const updatePanel = buildPanel(document.getElementById('panel'), handlers);
 load(loadCreature() || newCreature(Date.now(), s.params));
 setInterval(tick, 100);

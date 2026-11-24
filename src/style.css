@@ -153,7 +153,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: opacity 0.2s;
 }
 .em:hover { background: rgba(0, 0, 0, 0.06); }
-.em.zz, .palette.locked .em.zz { cursor: default; opacity: 0.5; }
+.em.zz { cursor: default; opacity: 0.5; }
+.em.zz[data-zz] { cursor: pointer; }
+.em.zz:not([data-zz]):hover { background: none; }
 .em:active { transform: scale(0.88); }
 
 /* ── test panel ── */

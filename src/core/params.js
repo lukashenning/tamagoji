@@ -57,7 +57,7 @@ export const DEFAULT_PARAMS = {
 
   // too tired: while asleep with low energy your sign only sometimes wakes it
   tiredBelow: 0.1, // below this energy it never wakes from a sign
-  tiredBlockSec: 10, // after a failed attempt, input is blocked this long ("Zu müde...")
+  tiredZz: 10, // after a failed attempt ("Zu müde..."): this many 💤 to tap away before the keys come back
 
   // storage
   maxSaveMB: 10, // above this, the oldest part of the history is dropped

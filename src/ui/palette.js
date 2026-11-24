@@ -4,7 +4,7 @@
 
 const cells = (list) => list.map((e) => `<span class="em${e.pinned ? ' pinned' : ''}" data-e="${e.tok}">${e.tok}</span>`).join('');
 
-export function buildPalette(root, { onPick }) {
+export function buildPalette(root, { onPick, onZz }) {
   root.innerHTML = `
     <div class="kb-half"><div class="kb-title kb-title-left"></div><div class="kb-grid kb-recent"></div></div>
     <div class="kb-half"><div class="kb-title kb-title-right"></div><div class="kb-grid kb-random"></div></div>`;
@@ -14,11 +14,13 @@ export function buildPalette(root, { onPick }) {
   const titleRight = root.querySelector('.kb-title-right');
   let lastRecent = '';
   let lastRandom = '';
-  let sleepy = null; // "Zu müde...": { order, shown } while the 💤 keys are shown
+  let sleepy = null; // "Zu müde...": the 💤 slots shown (as a key), else null
 
   root.addEventListener('click', (e) => {
     const b = e.target.closest('.em');
-    if (b) onPick(b.dataset.e);
+    if (!b) return;
+    if (b.dataset.zz) onZz(Number(b.dataset.zz));
+    else if (b.dataset.e) onPick(b.dataset.e);
   });
 
   return {
@@ -39,25 +41,17 @@ export function buildPalette(root, { onPick }) {
       random.innerHTML = cells(list.map((tok) => ({ tok })));
     },
     /**
-     * "Zu müde...": all keys show 💤; `progress` 0…1 hides them one by one like a draining bar
-     * (bottom row from the right, then upwards), so at 1 all are gone. Then the normal keys come back.
+     * "Zu müde...": a little game. The keys are empty except for a few 💤 at the given slots
+     * (0–15 left half, 16–31 right half); tapping one calls onZz(slot).
+     * @param {Set<number>} slots
      */
-    setSleepy(progress) {
-      if (!sleepy) {
-        // like a draining bar across both halves (4 rows × 8 columns): bottom row first, right to
-        // left, then the row above. Left half = cells 0–15, right half = 16–31 (4 per row).
-        const order = [];
-        for (let row = 3; row >= 0; row--) {
-          for (let col = 7; col >= 0; col--) order.push(col >= 4 ? 16 + row * 4 + (col - 4) : row * 4 + col);
-        }
-        sleepy = { order, shown: -1 };
-        lastRecent = lastRandom = ''; // the normal keys are redrawn afterwards
-      }
-      const hidden = Math.min(32, Math.floor(Math.max(0, progress) * 33));
-      if (hidden === sleepy.shown) return;
-      sleepy.shown = hidden;
-      const gone = new Set(sleepy.order.slice(0, hidden));
-      const half = (from) => Array.from({ length: 16 }, (_, i) => `<span class="em zz">${gone.has(from + i) ? '' : '💤'}</span>`).join('');
+    setSleepy(slots) {
+      const key = [...slots].sort((a, b) => a - b).join(',');
+      if (sleepy === key) return;
+      sleepy = key;
+      lastRecent = lastRandom = ''; // the normal keys are redrawn afterwards
+      const half = (from) =>
+        Array.from({ length: 16 }, (_, i) => (slots.has(from + i) ? `<span class="em zz" data-zz="${from + i}">💤</span>` : '<span class="em zz"></span>')).join('');
       recent.innerHTML = half(0);
       random.innerHTML = half(16);
     },
