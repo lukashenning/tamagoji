@@ -266,6 +266,13 @@ export class Mind {
     return c;
   }
 
+  /** How long it stays awake when left alone: shorter the more tired it is; never at full energy. */
+  idleSleepMs() {
+    const e = this.energy / this.capacity;
+    if (e >= 1) return Infinity;
+    return Math.max(this.p.idleSleepMinSec * 1000, this.p.idleSleepMin * 60000 * Math.max(0, e));
+  }
+
   label() {
     return this.awake ? '' : 'sleeping';
   }
@@ -295,7 +302,7 @@ export class Mind {
     // 1. tired?
     const e = this.energy / this.capacity;
     if (this.energy <= 0) return { tok: SLEEP, why: { mode: 'falls asleep (no energy left)' } };
-    if (e < p.sleepyBelow && rng() < ((p.sleepyBelow - e) / p.sleepyBelow) * 0.35) return { tok: SLEEP, why: { mode: 'nods off (sleepy)' } };
+    if (e < p.sleepyBelow && rng() < p.nodOffMax * ((p.sleepyBelow - e) / p.sleepyBelow) ** 2) return { tok: SLEEP, why: { mode: `nods off (tired: ${pct(e)} energy)` } };
 
     // 2. its own ✓ / ✗ on your real sign
     const ev = this.lastEval;

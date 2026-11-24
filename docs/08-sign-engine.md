@@ -79,8 +79,12 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
 
 ## Sleep
 
-Left alone for 2 minutes it falls asleep (also when its energy is still high: then it's a short nap,
-at least ~3 min). When it wakes up, by itself or woken by you, it **waits for you** and says nothing.
+- **Left alone** it falls asleep after 2 min × its energy: at 90% after ~1:50, at 50% after 1 min,
+  at 25% after 30 s (never sooner than 10 s). **At 100% energy it doesn't fall asleep.**
+- **Mid-conversation** it can nod off below 40% energy, the more tired the likelier: per turn of its
+  50% × ((40% − energy) / 40%)²: at 30% 3%, at 20% 13%, at 10% 28%; at 0% it falls asleep.
+- **Waking by itself**: once rested (100%), 1–4 s later (while the app is open).
+- When it wakes up, by itself or woken by you, it **waits for you** and says nothing.
 
 ## Dreams
 

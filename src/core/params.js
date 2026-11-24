@@ -38,12 +38,14 @@ export const DEFAULT_PARAMS = {
 
   // energy & sleep
   capacity: 80, // inputs until tired (~6 min)
-  sleepyBelow: 0.25, // energy fraction where nodding off can start
-  idleSleepMin: 2, // falls asleep when left alone this long
+  sleepyBelow: 0.4, // below this energy it can nod off mid-conversation, more likely the more tired
+  nodOffMax: 0.5, // chance per turn of its at 0 energy (curve: ((sleepyBelow − e) / sleepyBelow)²)
+  idleSleepMin: 2, // left alone it falls asleep after this × its energy (50% → 1 min); never at 100%
+  idleSleepMinSec: 10, // … but not sooner than this
   fullRecoveryMin: 60, // empty → full; energy recovers steadily while sleeping
   dreamIntervalSec: 3, // one dream sign every few seconds
   dreamWeight: 0.1, // each dreamed sign is learned this much on waking
-  wakeDelaySec: [2, 20],
+  wakeDelaySec: [1, 4], // rested (100%): wakes by itself this many seconds later
   replyDelaySec: [0.6, 1.5],
 
   // seed: random emojis it is born with (its first seats)

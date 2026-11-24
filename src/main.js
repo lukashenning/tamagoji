@@ -101,7 +101,7 @@ function tick() {
   s.clock.tick();
   const now = s.clock.now();
   const m = s.mind;
-  const idleMs = s.params.idleSleepMin * 60000;
+  const idleMs = m.idleSleepMs(); // shorter the more tired; never at full energy
 
   if (m.awake) {
     if (now - m.lastEntryT > idleMs) {
