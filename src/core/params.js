@@ -7,6 +7,7 @@ export const DEFAULT_PARAMS = {
   levels: 4, // context lengths 1…4
   levelGrowth: 2, // level weights 1, 2, 4, 8: each longer context counts double
   repeatWeight: 1, // each use of a sign after a context adds this to the link
+  decayPerTurn: 0.03, // while awake, every link drifts this much towards 0 per turn of yours (±3 → 0 in 100 turns)
   temperature: 3, // chaos: how strongly more votes win (higher = more even)
 
   // ✓ / ✗ (yours and its own) on the last real sign's links
@@ -70,4 +71,5 @@ export const SLIDERS = [
   { key: 'surpriseBase', label: 'base surprise', min: 0, max: 0.5, step: 0.01 },
   { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.8, step: 0.01 },
   { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.5, step: 0.05 },
+  { key: 'decayPerTurn', label: 'fading (towards 0 per turn)', min: 0, max: 0.1, step: 0.005 },
 ];

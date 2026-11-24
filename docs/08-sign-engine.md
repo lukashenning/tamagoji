@@ -23,7 +23,11 @@ levels (both speakers' real signs count as context; special signs are skipped):
 | 4 | `c b a x → s` |
 
 Each repeat adds **+1** to that link. Its own signs are learned only through ✓ / ✗ (and a little
-in dreams). No forgetting: links only change by use, ✓, ✗ and dreams.
+in dreams).
+
+**Slow fading** (D67): while it's awake, every link drifts **0.03 towards 0 per turn of yours** (any
+input of yours counts as a turn). A +3 or −3 link is back at 0 after about 100 turns; a +30 link
+after about 1000. Not while it sleeps. Slider "fading".
 
 ## Expecting the next sign: votes
 
@@ -97,5 +101,5 @@ its outputs.
 
 ## Not in this engine
 
-Complexity score, memory fading, ❓-streak rules, special retry rule, loop avoidance,
+Complexity score, ❓-streak rules, special retry rule, loop avoidance,
 pattern strength rankings (all `main`, docs/07). Growth measurement comes later.

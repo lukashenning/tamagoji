@@ -105,6 +105,7 @@ export class Mind {
   }
 
   input(t, cost) {
+    this.assoc.tick(); // one more awake turn: all links drift a little towards 0
     this.energy -= cost;
     this.sessionInputs++;
     this.totalInputs++;

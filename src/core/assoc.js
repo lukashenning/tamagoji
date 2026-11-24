@@ -1,13 +1,33 @@
 // Association memory (docs/08): for every context of 1…4 real signs, how strongly each sign has
-// followed it. Links only change by use (+1), ✓ / ✗ and dreams; no forgetting.
+// followed it. Links change by use (+1), ✓ / ✗ and dreams, and are slowly pulled back towards 0 while
+// it's awake: decayPerTurn per turn of yours (0.03: a +3 or −3 link is back at 0 after 100 turns).
 
 import { SEP } from './tokens.js';
 
 export class Assoc {
   constructor(params) {
     this.p = params;
-    this.table = new Map(); // "L|ctx" -> Map(sign -> weight)
+    this.table = new Map(); // "L|ctx" -> Map(sign -> { w, c }): weight as of turn c
     this.version = 0;
+    this.clock = 0; // your turns while awake (the slow pull towards 0 runs on this)
+  }
+
+  /** One more turn of yours while awake. */
+  tick() {
+    this.clock++;
+    this.version++;
+  }
+
+  /** A link's weight now: pulled towards 0 by decayPerTurn per turn since it last changed. */
+  eff(e) {
+    const left = Math.abs(e.w) - this.p.decayPerTurn * (this.clock - e.c);
+    return left > 0 ? Math.sign(e.w) * left : 0;
+  }
+
+  /** The current weight of "after ctx comes sign" on level ctx.length. */
+  get(ctx, sign) {
+    const e = this.table.get(this.key(ctx, ctx.length))?.get(sign);
+    return e ? this.eff(e) : 0;
   }
 
   key(ctx, L) {
@@ -23,7 +43,8 @@ export class Assoc {
       const k = this.key(ctx, L);
       let row = this.table.get(k);
       if (!row) this.table.set(k, (row = new Map()));
-      row.set(sign, (row.get(sign) || 0) + amount);
+      const e = row.get(sign);
+      row.set(sign, { w: (e ? this.eff(e) : 0) + amount, c: this.clock });
     }
   }
 
@@ -33,7 +54,8 @@ export class Assoc {
     const maxL = Math.min(this.p.levels, ctx.length);
     for (let L = 1; L <= maxL; L++) {
       const row = this.table.get(this.key(ctx, L));
-      out.push({ L, ctx: ctx.slice(ctx.length - L), weight: Math.pow(this.p.levelGrowth, L - 1), links: row ? [...row] : [] });
+      const links = row ? [...row].map(([s, e]) => [s, this.eff(e)]).filter(([, w]) => w !== 0) : [];
+      out.push({ L, ctx: ctx.slice(ctx.length - L), weight: Math.pow(this.p.levelGrowth, L - 1), links });
     }
     return out;
   }
@@ -51,7 +73,10 @@ export class Assoc {
     for (const [k, row] of this.table) {
       const [l, ctx] = [Number(k.slice(0, k.indexOf('|'))), k.slice(k.indexOf('|') + 1)];
       if (l !== L) continue;
-      for (const [sign, w] of row) out.push({ ctx: ctx.split(SEP), sign, w });
+      for (const [sign, e] of row) {
+        const w = this.eff(e);
+        if (w !== 0) out.push({ ctx: ctx.split(SEP), sign, w });
+      }
     }
     return out.sort((a, b) => Math.abs(b.w) - Math.abs(a.w)).slice(0, count);
   }

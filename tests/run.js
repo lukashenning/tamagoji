@@ -21,7 +21,7 @@ function pct(x) {
   return Number.isFinite(x) ? Math.round(x * 100) + '%' : '–';
 }
 
-const P = { ...DEFAULT_PARAMS };
+const P = { ...DEFAULT_PARAMS, decayPerTurn: 0 }; // exact link values; fading is tested on its own
 const MIN = 60000;
 
 /** A newborn with a history we can append to. */
@@ -44,10 +44,7 @@ function demo(o, toks) {
     o('P', tok);
   }
 }
-const link = (m, ctx, sign) => {
-  const row = m.assoc.table.get(ctx.length + '|' + ctx.join(SEP));
-  return row ? row.get(sign) || 0 : 0;
-};
+const link = (m, ctx, sign) => m.assoc.get(ctx, sign);
 const top = (m) => m.expect().probs[0]?.[0] ?? null;
 
 // 1. learning on 4 levels: your sign strengthens its links to the 1…4 signs before it; repeats add
