@@ -11,7 +11,8 @@ identity (behaviour, later its appearance) should follow from its **token histor
 levels 1–4 (votes, longer contexts count double), ✓/✗ on the last real sign (+3/−3, negative links),
 its own ✓/✗ (your ✗ inverts, ✓ repeats), "not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure,
 surprise (10% base + repetition + waiting), ☐ chaining, dreams (+0.1), top 6 of its last 1000 outputs →
-seats (look) and a usage-weighted voice. Own browser storage (`tamagoji.creature.exp1`). `sim/` is not
+seats (look) and a usage-weighted voice. Own browser storage (`tamagoji.creature.exp1`). Rule checks over
+simulated play: `jsc -m tests/play.js` (40 creatures × 1500 steps, ~7 s). `sim/` is not
 updated for it. `main` stays at v0.13 (below).
 
 **Prototype 0.13 on the simple core of 0.6** (2026-11-23), described in `docs/07-simple-core.md`. The user found
