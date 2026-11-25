@@ -176,6 +176,13 @@ export function buildPanel(root, h) {
       <div class="dim">Your sign: +${p.repeatWeight}. ✓ +${p.yesWeight}, ✗ −${p.noWeight} on the last real sign. Dreams +${p.dreamWeight}. Level 1 always; levels 2–4 only where no ✓ ✗ ☐ came between the signs. (number) = contexts known on that level.</div>
       <table class="rules">${strongRows || '<tr><td class="dim">nothing learned yet</td></tr>'}</table>
       <div>${m.seq.length} real signs in the conversation · ${m.stats.takenBack} taken back · last dream: learned ${m.stats.dreamLearned} dreamed signs</div>
+      <div><b>complexity</b> ${
+        m.complexity
+          ? `${num(m.complexity.value, 1)} <span class="dim">= ${m.complexity.known} signs known (used ≥ ${p.complexityMinUses}×) × ${Math.round(m.complexity.order * 100)}% order, from its last ${p.complexityDreamMin} dream signs${
+              m.complexityLog.length > 1 ? ` · earlier: ${m.complexityLog.slice(-8, -1).map((c) => num(c.value, 1)).join(' → ')}` : ''
+            }</span>`
+          : `<span class="dim">not measured yet (needs a dream of ${p.complexityDreamMin}+ signs, about ${Math.round((p.complexityDreamMin * p.dreamIntervalSec) / 60)} min of sleep)</span>`
+      }</div>
     </section>`);
 
     // ── top signs → seats (look) & voice ──

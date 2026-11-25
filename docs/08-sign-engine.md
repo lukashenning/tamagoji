@@ -137,6 +137,24 @@ game + lab panel.
 **Logo.** "TAMAGOJI" across the top of the game view; tapping it asks whether to start over with a new
 creature (the lab panel's reset button does it right away).
 
+## Complexity (D75)
+
+Measured on its dreams (what it produces on its own). After a dream in which it learned at least
+**700** signs (about 35 min of sleep; shorter dreams don't change it), the last 700 of them are measured
+(`src/core/complexity.js`):
+
+- **known (K)**: different signs that appear at least 3 times *and* at least once come right where they
+  usually come (after a sign they usually follow). Surprise signs that happen to recur don't count.
+- **order (O, 0–100%)**: how often the next sign could have been guessed from what usually follows the
+  previous one elsewhere in those 700 signs (each step judged without itself, so a sign seen once can
+  never look ordered).
+- **complexity = K × O**: roughly "the number of signs it uses in an orderly way".
+
+Checks: a 4-sign loop → 4 (4 × 100%); random babbling from 60 signs → 0.1; 40 signs in 8 chains with
+10% surprises → 20 (36 × 56%). Simulated play (12-sign player language): 3–10 (≈ 11 known × 70%).
+Shown in the panel (association memory) with the earlier values; stored per measurement, rebuilt from
+the history like everything else. Not used for anything else yet.
+
 ## Top 6 → seats → look and voice
 
 - Its signs are ranked by how often it used them in its **last 1000 outputs** (awake real signs,

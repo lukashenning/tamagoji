@@ -3,6 +3,7 @@
 // decide() picks its next move; the app writes it into the history and observes it.
 
 import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, isElemental } from './tokens.js';
+import { measureComplexity } from './complexity.js';
 import { rngFor, sample, pick, hashString } from './rng.js';
 import { makeCharacter } from './emojiIndex.js';
 import { hourlySet } from './keyboard.js';
@@ -62,6 +63,10 @@ export class Mind {
     this.seats = []; // [{ seat, tok, style, hue, color, uses }]
 
     this.stats = { yes: 0, no: 0, takenBack: 0, dreamLearned: 0 };
+
+    // complexity, measured after each long enough dream (D75)
+    this.complexity = null; // { value, known, order, t }
+    this.complexityLog = []; // earlier measurements, oldest first
   }
 
   static replay(save, params) {
@@ -447,6 +452,12 @@ export class Mind {
         list.push({ tok, cutBefore: cut });
       });
       this.learnProximity(s.dream.slice(0, n));
+      if (n >= this.p.complexityDreamMin) {
+        const c = measureComplexity(s.dream.slice(n - this.p.complexityDreamMin, n), this.p.complexityMinUses);
+        this.complexity = { ...c, t };
+        this.complexityLog.push(this.complexity);
+        if (this.complexityLog.length > 100) this.complexityLog.shift();
+      }
       this.stats.dreamLearned = n;
       this.energy = this.energyAt(t);
       this.updateSeats(); // its look changes (if at all) while it sleeps

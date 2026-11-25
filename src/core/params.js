@@ -46,6 +46,8 @@ export const DEFAULT_PARAMS = {
   dreamIntervalSec: 3, // one dream sign every few seconds
   dreamWeight: 0.1, // each dreamed sign is learned this much on waking
   proximityWeight: 0.04, // dreams also link each sign to its neighbours the other way round (D70)
+  complexityDreamMin: 700, // a dream of at least this many learned signs updates its complexity (D75)
+  complexityMinUses: 3, // a sign counts as known when it appears this often in those signs
   wakeDelaySec: [1, 4], // rested (100%): wakes by itself this many seconds later
   replyDelaySec: [0.6, 1.5],
 

@@ -147,4 +147,10 @@ log(`Its ✓: ${stats.reactYes[0]} (chances where your sign was ≥ 40% expected
 log(`"Not that, this": ${stats.takenBack} signs taken back`);
 const avg = (f) => minds.reduce((a, m) => a + f(m), 0) / minds.length;
 log(`Per creature: ${avg((m) => m.assoc.table.size).toFixed(0)} contexts known · ${avg((m) => m.outputs.length).toFixed(0)} outputs · seats e.g. ${minds[0].seats.map((x) => x.tok).join('')} · top ${minds[0].topSigns().slice(0, 8).map((r) => r.tok + r.uses).join(' ')}`);
+const cx = minds.filter((m) => m.complexity).map((m) => m.complexity);
+const measured = minds.reduce((a, m) => a + m.complexityLog.length, 0);
+log(
+  `Complexity (last measurement per creature, ${cx.length} of ${minds.length} measured, ${measured} measurements): ` +
+    (cx.length ? cx.map((c) => `${c.value.toFixed(0)} (${c.known}×${Math.round(c.order * 100)}%)`).join(' · ') : '–'),
+);
 log(problems.size ? `\n${problems.size} rule(s) FAILED` : '\nall rules held');

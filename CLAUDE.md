@@ -12,7 +12,8 @@ from the user's sketch: associations on levels 1–4 (votes, longer contexts cou
 ✓/✗ on the last real sign (+3/−3, negative links), its own ✓/✗ (your ✗ inverts, ✓ repeats),
 "not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure, surprise (10% base + repetition +
 waiting), ☐ chaining, slow fading, dreams (+0.1, plus proximity links the other way round at +0.04,
-D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice. UI: tap creature ✓,
+D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice. Complexity =
+known signs × order, measured after dreams of ≥ 700 signs (D75, panel only). UI: tap creature ✓,
 tap around ❓, swipe through ✗, soft flashes, exchange row bottom left; phones/tablets game-only,
 Escape toggles game-only on desktop (D71). Browser storage `tamagoji.creature.exp1` (kept so the
 user's creature survives). Rule checks over simulated play: `jsc -m tests/play.js` (40 creatures ×
