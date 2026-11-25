@@ -97,7 +97,7 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
 - **While it sleeps** the keyboard slides away (the stage grows into its place) and slides back when it
   wakes. Any tap or swipe on the stage wakes it, always as your ❓ (D76). Woken with little energy, it
   soon nods off again by itself (the nod-off chance and idle time depend on energy).
-- **Sleep clouds**: large ☁️ (34–90 px) of different sizes and opacity drift slowly over the lower area
+- **Sleep clouds**: large ☁️ (48–120 px) of different sizes and opacity spread wide over the lower area, barely moving
   below it while it sleeps (no "sleeping" label any more), up to 14
   when it's empty, fewer as its energy comes back (one fades out at a time), none when nearly rested.
 

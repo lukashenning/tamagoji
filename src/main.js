@@ -370,10 +370,10 @@ function sleepClouds(tiredness) {
     const node = document.createElement('span');
     node.className = 'cloud';
     node.textContent = '☁️';
-    const size = 34 + Math.random() * 56; // 34–90 px
+    const size = 48 + Math.random() ** 1.5 * 72; // 48–120 px, mostly mid-sized, a few big ones
     node.style.fontSize = size.toFixed(0) + 'px';
     node.style.zIndex = String(Math.round(size)); // bigger ones in front
-    const c = { node, x: (Math.random() - 0.5) * 300, y: Math.random() * 140, amp: 10 + Math.random() * 22, period: 9000 + Math.random() * 12000, phase: Math.random() * 6.3, alpha: 0.25 + Math.random() * 0.5, leaving: false };
+    const c = { node, x: (Math.random() - 0.5) * 420, y: Math.random() * 120, amp: 3 + Math.random() * 7, period: 14000 + Math.random() * 14000, phase: Math.random() * 6.3, alpha: 0.25 + Math.random() * 0.5, leaving: false };
     cloudBox.append(node);
     clouds.push(c);
     requestAnimationFrame(() => (node.style.opacity = c.alpha.toFixed(2))); // fade in
