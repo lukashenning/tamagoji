@@ -61,6 +61,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 14px;
   touch-action: pan-y; /* horizontal swipes reach the page (✗ = swipe through the creature) */
   cursor: pointer;
+  z-index: 0; /* so the flash sits behind the creature but above the phone's background */
+}
+/* a soft, quick flash behind everything when you send ✓ (green), ✗ (red), ❓ (white) */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 36px 36px 0 0;
+  opacity: 0;
+  pointer-events: none;
 }
 .creature {
   --size: 110px;
@@ -108,10 +118,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   will-change: transform, opacity;
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
-/* bottom right: the current exchange (your signs, its signs dimmer) since your last ✓ ✗ ❓ */
+/* bottom left, growing to the right: the current exchange (your signs, its signs dimmer) since your last ✓ ✗ ❓ */
 .you {
   position: absolute;
-  right: 22px;
+  left: 22px;
   bottom: 16px;
   display: flex;
   gap: 3px;

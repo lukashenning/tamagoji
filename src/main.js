@@ -98,9 +98,21 @@ function playerSend(tok) {
     append({ t: now, who: 'S', tok: WAKE, m: 'manual' });
   } else if (m.turn !== 'P') return;
   append({ t: s.clock.now(), who: 'P', tok });
-  if (ELEMENTALS.includes(tok)) playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
+  if (ELEMENTALS.includes(tok)) {
+    playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
+    flash(tok);
+  }
   s.replyAt = null;
   render();
+}
+
+// a soft, quick flash of the background: ✓ green, ✗ red, ❓ white
+const FLASH = { [YES]: ['#7fd99a', 0.35], [NO]: ['#f08a8a', 0.3], [ASK]: ['#ffffff', 1] };
+function flash(tok) {
+  const node = document.getElementById('flash');
+  const [color, peak] = FLASH[tok];
+  node.style.background = color;
+  node.animate([{ opacity: 0 }, { opacity: peak, offset: 0.25 }, { opacity: 0 }], { duration: 380, easing: 'ease-out' });
 }
 
 // ── gestures on the stage ──
