@@ -119,7 +119,9 @@ The dream emojis rising above it come out at the 1× dream pace (one per 3 real 
 ## Your side: the corner row and gestures
 
 Bottom left (growing to the right): the real signs of the current exchange, yours and its (its dimmer), since your last
-✓ or ✗; your ❓ and its own specials don't clear the row (display only: for learning, ❓ still cuts chains); it starts fresh after sleep. At most the last 5.
+✓ or ✗; your ❓ and its own specials don't clear the row (display only: for learning, ❓ still cuts chains); while you
+answer with ✗ (also several times), it keeps showing what came before the sign your first ✗ rejected,
+plus its newest try, until you send something other than ✗ (the "not that, this" context); it starts fresh after sleep. At most the last 5.
 
 ✓ ✗ ❓ are not on the keyboard (both halves are 16 emojis); you give them only with gestures.
 On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe through it (left ↔ right) = ✗**.

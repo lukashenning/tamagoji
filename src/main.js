@@ -211,12 +211,17 @@ function lastEntry(who) {
 }
 
 /** The bottom-left row: the real signs of the current exchange, yours and its (its dimmer), since
- * your last ✓ or ✗ (your ❓ and its own specials don't clear the row). Starts fresh after sleep. */
+ * your last ✓ or ✗ (your ❓ and its own specials don't clear the row). Starts fresh after sleep.
+ * While you answer with ✗ (once or several times in a row), it keeps showing what came before the
+ * sign your first ✗ rejected, plus its newest try, so you see the "not that, this" context until you
+ * send something other than ✗. */
 const ROW_MAX = 5;
-function exchangeRow() {
-  const h = s.save.history;
+const real = (e) => e.who !== 'S' && !ELEMENTALS.includes(e.tok);
+
+/** The row as it stands just before history index `end`. */
+function rowBefore(h, end) {
   const row = [];
-  for (let i = h.length - 1; i >= 0 && row.length < ROW_MAX; i--) {
+  for (let i = end - 1; i >= 0 && row.length < ROW_MAX; i--) {
     const e = h[i];
     if (e.who === 'S') break;
     if (ELEMENTALS.includes(e.tok)) {
@@ -226,6 +231,32 @@ function exchangeRow() {
     if (!s.mind.takenBack.has(i)) row.unshift(e);
   }
   return row;
+}
+
+function exchangeRow() {
+  const h = s.save.history;
+  // your latest answer (❓ doesn't count): only a ✗ keeps the context
+  let last = -1;
+  for (let i = h.length - 1; i >= 0 && h[i].who !== 'S'; i--) {
+    if (h[i].who === 'P' && h[i].tok !== ASK) {
+      last = i;
+      break;
+    }
+  }
+  if (last < 0 || h[last].tok !== NO) return rowBefore(h, h.length);
+  // the first ✗ of your run of ✗ (❓ in between allowed), and the sign it rejected
+  let first = last;
+  for (let i = last - 1; i >= 0 && h[i].who !== 'S'; i--) {
+    if (h[i].who !== 'P') continue;
+    if (h[i].tok === NO) first = i;
+    else if (h[i].tok !== ASK) break;
+  }
+  let rejected = first - 1;
+  while (rejected >= 0 && h[rejected].who !== 'S' && !real(h[rejected])) rejected--;
+  if (rejected < 0 || h[rejected].who === 'S') return rowBefore(h, h.length);
+  // what came before it, plus its newest try after your latest ✗
+  const tries = h.slice(last + 1).filter(real);
+  return [...rowBefore(h, rejected), ...tries].slice(-ROW_MAX);
 }
 
 let rowKey = '';
