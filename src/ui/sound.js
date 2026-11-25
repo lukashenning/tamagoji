@@ -174,11 +174,15 @@ let dreamOn = (() => {
   }
 })();
 export const dreamSoundOn = () => dreamOn;
+
+let dreamOut = null; // the dream sounds' own channel: everything of the dreams (notes and reverb) runs through it
+/** Mute / unmute the dream channel: cuts off at once (a 10 ms fade, no click), ringing notes and reverb too. */
 export function setDreamSound(on) {
   dreamOn = on;
   try {
     localStorage.setItem(DREAM_KEY, on ? 'on' : 'off');
   } catch {}
+  if (dreamOut) dreamOut.gain.setTargetAtTime(on ? 1 : 0, dreamOut.context.currentTime, 0.01);
 }
 
 let bus = null;
@@ -205,9 +209,12 @@ function reverbBus(ac) {
   wet.gain.value = 0.45;
   const dry = ac.createGain();
   dry.gain.value = 0.7;
+  dreamOut = ac.createGain();
+  dreamOut.gain.value = dreamOn ? 1 : 0;
+  dreamOut.connect(ac.destination);
   bus = ac.createGain();
-  bus.connect(dry).connect(ac.destination);
-  bus.connect(pre).connect(conv).connect(soft).connect(wet).connect(ac.destination);
+  bus.connect(dry).connect(dreamOut);
+  bus.connect(pre).connect(conv).connect(soft).connect(wet).connect(dreamOut);
   return bus;
 }
 
