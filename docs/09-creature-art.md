@@ -71,8 +71,9 @@ is position 3, so ✓ is 1121111.)
   box as an alignment guide (e.g. the default figure); it is ignored.
 - **Dark blue** inside a box is the drawing. Its place inside the box is its place on the creature:
   all parts share the box as their frame and are stacked, back to front: legs, arms, eyes, nose,
-  mouth, hat. The **object** is drawn the same way; in the game its frame stands right next to the
-  creature's frame, on its right.
+  mouth, hat. The **object** is drawn the same way (filling its box is fine); in the game it is shown
+  at 75% size to the creature's right (its frame starts at 80% of the creature's frame width), so it
+  fits on a phone.
 - An **empty box** (no dark blue) = that variant doesn't exist → the game shows variant 1 instead.
   If variant 1 is empty, the row is skipped.
 - Fixed variants (see above): eyes 2 closed, mouth 2 ✓, mouth 3 ✗, arms 2 ?.
@@ -87,9 +88,11 @@ is position 3, so ✓ is 1121111.)
      overshoots and slight slants don't matter), groups them into rows, left to right;
    - takes the dark blue inside each box (grid lines, paper, red and grey writing are dropped),
      scales it to the **frame** (192 px on the longer side, the shape of the boxes; fixed by the
-     first sheet in `art/parts/frame.json`, later sheets are scaled to the same frame);
+     first sheet in `art/parts/frame.json`, later sheets are scaled to the same frame). A box side is a
+     long red line across the whole box, so labels next to boxes are never mistaken for sides; all
+     boxes on a sheet are assumed to be the same size;
    - writes monochrome images (white + transparency) to `art/parts/<part>/<NN>/<variant>.png`,
-     continuing the style numbers, and keeps the sheet in `art/sheets/`;
+     continuing the style numbers, and keeps the sheet in `art/sheets/` (e.g. `eyes-2.webp`);
    - writes a preview of everything it extracted, which Claude checks (and can show you).
 3. `python3 scripts/build_parts.py` builds what the game loads: `assets/parts/<part>.png` (one
    atlas per part: a row per style, 6 columns, white + transparency; a few KB each) and

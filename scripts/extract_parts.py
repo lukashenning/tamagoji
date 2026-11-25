@@ -88,7 +88,10 @@ def find_boxes(w, h, rows):
     mw = statistics.median(s[2] - s[0] for s in big)
     mh = statistics.median(s[3] - s[1] for s in big)
     big = [s for s in big if s[2] - s[0] > 0.5 * mw and s[3] - s[1] > 0.5 * mh]
-    boxes = [inside(rows, s) for s in big]
+    found = [b for b in (inside(rows, s) for s in big) if b]  # handwritten labels aren't boxes
+    # all boxes on a sheet have about the same height: take the top line that gives that height
+    usual = statistics.median(b[3] - b[1][-1] for b in found)
+    boxes = [(L, min(tops, key=lambda t: abs(B - t - usual)), Rt, B) for L, tops, Rt, B in found]
     # reading order: rows by height, then left to right
     boxes.sort(key=lambda b: (b[1] + b[3]) / 2)
     lines, cur = [], []
@@ -102,33 +105,55 @@ def find_boxes(w, h, rows):
     return [sorted(line, key=lambda b: b[0]) for line in lines]
 
 
+def runs(values, limit):
+    """Index ranges [(a, b)] where values[i] >= limit."""
+    out, start = [], None
+    for i, v in enumerate(values + [-1]):
+        if v >= limit and start is None:
+            start = i
+        elif v < limit and start is not None:
+            out.append((start, i - 1))
+            start = None
+    return out
+
+
 def inside(rows, s):
-    """The inside of a hand-drawn box: each side is where its line runs most of the time (median),
-    so overshooting or slightly slanted lines don't matter; then inset past the line's thickness."""
+    """The inside of a hand-drawn box, or None if the shape isn't a box (e.g. a handwritten label).
+    A box side is a long red line across (almost) the whole shape; labels next to a box (DEFAULT,
+    numbers) never are. Lines may be slightly slanted or wavy: each is looked at through a band of
+    ±R px, and the inside starts past the band."""
+    R, M = 5, 3  # band half-height, extra margin inside the line
     x0, y0, x1, y1 = s
-    red = lambda x, y: is_red(rows[y][x * 4], rows[y][x * 4 + 1], rows[y][x * 4 + 2])
-    ys = range(y0 + (y1 - y0) // 4, y1 - (y1 - y0) // 4)
-    xs = range(x0 + (x1 - x0) // 4, x1 - (x1 - x0) // 4)
-    def edge(coords, scan):
-        hits = [next((v for v in scan(c) if red(*v)), None) for c in coords]
-        return [h for h in hits if h]
-    lefts = edge(ys, lambda y: ((x, y) for x in range(x0, x1)))
-    rights = edge(ys, lambda y: ((x, y) for x in range(x1 - 1, x0, -1)))
-    tops = edge(xs, lambda x: ((x, y) for y in range(y0, y1)))
-    bottoms = edge(xs, lambda x: ((x, y) for y in range(y1 - 1, y0, -1)))
-    # line thickness: red run length from the left edge inwards
-    thick = []
-    for (x, y) in lefts[:: max(1, len(lefts) // 20)]:
-        n = 0
-        while x + n < x1 and red(x + n, y):
-            n += 1
-        thick.append(n)
-    t = (statistics.median(thick) if thick else 3) + 3
-    L = statistics.median(p[0] for p in lefts) + t
-    R = statistics.median(p[0] for p in rights) - t
-    T = statistics.median(p[1] for p in tops) + t
-    B = statistics.median(p[1] for p in bottoms) - t
-    return (int(L), int(T), int(R), int(B))
+    W, H = x1 - x0, y1 - y0
+    grid = [[is_red(rows[y][x * 4], rows[y][x * 4 + 1], rows[y][x * 4 + 2]) for x in range(x0, x1)] for y in range(y0, y1)]
+    # horizontal lines: share of columns with red within ±R rows
+    cum = [[0] * W]
+    for y in range(H):
+        cum.append([cum[-1][x] + grid[y][x] for x in range(W)])
+    hcov = [sum(cum[min(H, y + R + 1)][x] - cum[max(0, y - R)][x] > 0 for x in range(W)) / W for y in range(H)]
+    hr = runs(hcov, 0.7)
+    if len(hr) < 2:
+        return None
+    B = hr[-1][0] + R - M
+    tops = [r[1] - R + M for r in hr[:-1]]  # a wide label above can look like a line too: pick later
+    T = tops[0]
+    if B - T < 0.4 * H:
+        return None
+    # vertical lines, between the top and bottom lines
+    rowcum = []
+    for y in range(T, B):
+        c = [0]
+        for x in range(W):
+            c.append(c[-1] + grid[y][x])
+        rowcum.append(c)
+    vcov = [sum(c[min(W, x + R + 1)] - c[max(0, x - R)] > 0 for c in rowcum) / max(1, len(rowcum)) for x in range(W)]
+    vr = runs(vcov, 0.7)
+    if len(vr) < 2:
+        return None
+    L, Rt = vr[0][1] - R + M, vr[-1][0] + R - M
+    if Rt - L < 0.4 * W:
+        return None
+    return (x0 + L, [y0 + t for t in tops], x0 + Rt, y0 + B)
 
 
 def cut(rows, box, fw, fh):
@@ -206,7 +231,7 @@ def main():
         variants = []
         for box in line[:6]:
             alpha = cut(rows, box, fw, fh)
-            variants.append(alpha if max(max(r) for r in alpha) > 80 and sum(map(sum, alpha)) > 255 * 20 else None)
+            variants.append(alpha if max(max(r) for r in alpha) > 80 and sum(map(sum, alpha)) > 255 * 5 else None)  # tiny dots count too
         cells.append(variants)
     if a.preview:
         preview(a.preview, cells, fw, fh)
@@ -227,8 +252,8 @@ def main():
                 write_mask(os.path.join(folder, style, f'{v}.png'), fw, fh, alpha)
         print(f'  {part}/{style}: variants {", ".join(str(v) for v, x in enumerate(variants, 1) if x)}')
     os.makedirs(SHEETS, exist_ok=True)
-    base = os.path.splitext(os.path.basename(a.sheet))[0]
-    keep = os.path.join(SHEETS, f'{parts[0]}-{len(os.listdir(SHEETS)) + 1:02d}-{base}{os.path.splitext(a.sheet)[1]}')
+    n = sum(f.startswith(parts[0] + '-') for f in os.listdir(SHEETS)) + 1
+    keep = os.path.join(SHEETS, f'{parts[0]}-{n}{os.path.splitext(a.sheet)[1]}')  # e.g. eyes-1.webp, eyes-2.png
     shutil.copy(a.sheet, keep)
     print(f'sheet kept as {os.path.relpath(keep, ROOT)} · frame {fw}×{fh}')
 

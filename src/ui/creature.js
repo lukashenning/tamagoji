@@ -31,8 +31,10 @@ export function buildCreature(root) {
   }
 
   let art = null; // { frame: [w, h], parts: { eyes: { styles: [{ name, variants }], image } } }
+  let loaded = false; // nothing is shown until the art has loaded (no placeholder flash)
   loadArt().then((a) => {
     art = a;
+    loaded = true;
     for (const l of Object.values(layers)) l.key = ''; // redraw with the art
   });
 
@@ -72,7 +74,7 @@ export function buildCreature(root) {
    * @param {{ seats: { seat: string, tok: string }[], pose: number[], level: number }} look
    */
   function render({ seats, pose, level }) {
-    const shown = partsShown(level);
+    const shown = loaded ? partsShown(level) : 0;
     const [fw, fh] = art?.frame || [PLACEHOLDER_FRAME, PLACEHOLDER_FRAME];
     root.style.aspectRatio = `${fw} / ${fh}`; // the creature's box has the frame's shape
     PARTS.forEach((part, i) => {
@@ -113,9 +115,12 @@ async function loadArt() {
       Object.entries(m.parts || {}).map(async ([part, p]) => {
         if (!p.styles?.length) return;
         const image = new Image();
-        image.src = `assets/parts/${part}.png?v=${m.version || 0}`;
-        await image.decode();
-        parts[part] = { ...p, image };
+        const ok = await new Promise((done) => {
+          image.onload = () => done(true);
+          image.onerror = () => done(false); // that part keeps its placeholder
+          image.src = `assets/parts/${part}.png?v=${m.version || 0}`;
+        });
+        if (ok) parts[part] = { ...p, image };
       }),
     );
     return { frame: m.frame, parts };
