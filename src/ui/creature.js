@@ -1,9 +1,9 @@
 // Draws the creature from its parts (docs/09-creature-art.md, D77).
 //
 // Art: assets/parts/manifest.json + one atlas per part, assets/parts/<part>.png: one row per style,
-// 6 columns (variants 1–6), every cell the same frame size, grey shades + transparency. All parts are
-// drawn on the same frame, already in place, so they simply stack. Each part is tinted with its sign's
-// gbc1 colour: white → the colour, grey → darker shades of it, black stays black.
+// 6 columns (variants 1–6), every cell the same frame size, monochrome (white + transparency). All
+// parts are drawn on the same frame, already in place, so they simply stack. Each part is coloured
+// with its sign's gbc1 colour. A variant that doesn't exist (an empty box) shows variant 1.
 // Parts without art yet are drawn as simple placeholders, so the system can be tried before the art.
 //
 // Every part is its own layer (.part.part-<name>) with its own transform origin, ready for subtle
@@ -46,9 +46,10 @@ export function buildCreature(root) {
     return art?.parts[part]?.styles.length ? art.frame : [PLACEHOLDER_FRAME, PLACEHOLDER_FRAME];
   }
 
-  /** How many variants this part's style has (a move's digit beyond that shows variant 1). */
-  function variantsOf(part, style) {
-    return art?.parts[part]?.styles[style]?.variants ?? VARIANTS;
+  /** Does this part's style have this variant? (If not, variant 1 is shown.) */
+  function hasVariant(part, style, v) {
+    const vs = art?.parts[part]?.styles[style]?.variants;
+    return vs ? vs.includes(v) : v <= VARIANTS;
   }
 
   function strip(part, style, color) {
@@ -59,13 +60,10 @@ export function buildCreature(root) {
     c.width = w * VARIANTS;
     c.height = h;
     const g = c.getContext('2d');
-    g.imageSmoothingEnabled = false;
     g.drawImage(art.parts[part].image, 0, style * h, w * VARIANTS, h, 0, 0, w * VARIANTS, h);
-    g.globalCompositeOperation = 'multiply'; // white → the colour, greys → darker shades, black stays
+    g.globalCompositeOperation = 'source-in'; // the drawing in its colour (monochrome art)
     g.fillStyle = color;
     g.fillRect(0, 0, c.width, c.height);
-    g.globalCompositeOperation = 'destination-in'; // keep the original transparency
-    g.drawImage(art.parts[part].image, 0, style * h, w * VARIANTS, h, 0, 0, w * VARIANTS, h);
     tinted.set(key, c);
     return c;
   }
@@ -75,7 +73,8 @@ export function buildCreature(root) {
    */
   function render({ seats, pose, level }) {
     const shown = partsShown(level);
-    root.style.setProperty('--frame-w', frameSize('eyes')[0]);
+    const [fw, fh] = art?.frame || [PLACEHOLDER_FRAME, PLACEHOLDER_FRAME];
+    root.style.aspectRatio = `${fw} / ${fh}`; // the creature's box has the frame's shape
     PARTS.forEach((part, i) => {
       const l = layers[part];
       const seat = seats[i];
@@ -83,7 +82,7 @@ export function buildCreature(root) {
       l.wrap.hidden = !visible;
       if (!visible) return;
       const { style, color } = lookOf(seat.tok, styleCount(part));
-      const variant = pose[i] <= variantsOf(part, style) ? pose[i] : 1;
+      const variant = hasVariant(part, style, pose[i]) ? pose[i] : 1;
       const key = `${!!art}|${seat.tok}|${style}|${color}|${variant}`;
       if (key === l.key) return;
       l.key = key;
@@ -92,8 +91,9 @@ export function buildCreature(root) {
       l.canvas.height = h;
       const g = l.canvas.getContext('2d');
       g.clearRect(0, 0, w, h);
-      if (art?.parts[part]?.styles.length) {
-        g.imageSmoothingEnabled = false;
+      const drawn = !!art?.parts[part]?.styles.length;
+      l.canvas.classList.toggle('pixel', !drawn); // placeholders are pixel shapes; the art is smooth
+      if (drawn) {
         g.drawImage(strip(part, style, color), (variant - 1) * w, 0, w, h, 0, 0, w, h);
       } else drawPlaceholder(g, part, variant, color);
       l.wrap.title = `${part}: ${seat.tok} · style ${style + 1} · variant ${variant}`;
