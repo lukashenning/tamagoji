@@ -118,8 +118,8 @@ At 0.1 the sequence learning starts to suffer (next after one sign 68%, was 96%)
 
 The dream emojis rising above it come out at the 1× dream pace (one per 3 real seconds, rising in
 9 s), also when time runs faster; then each shows the dream sign of that moment.
-Each one also plays its melody as a very quiet glockenspiel, mostly reverb (a soft ~5 s tail, high
-tones damped, starting a moment late, little direct sound), slowed down so it lasts exactly until the
+Each one also plays its melody as a very quiet glockenspiel in a roomy space (a short, soft reverb:
+~1.6 s tail, high tones damped; the notes ring ~0.5 s, so they don't blur into each other), slowed down so it lasts exactly until the
 next dream emoji appears (3 s instead of 0.5 s). While it sleeps, a small speaker button at the top
 right (below the logo) mutes / unmutes these dream sounds; the choice is remembered on the device.
 

@@ -162,8 +162,8 @@ export function playMelody(tok, voice = DEFAULT_VOICE, volume = 1, octave = 0, {
   });
 }
 
-// ── dreams: a very quiet glockenspiel, far away in a big, soft room ──
-export const GLOCK_VOICE = { rich: 0.08, struck: 1, metal: 0.5, length: 1, hollow: 0, glide: 0, breath: 0, wobble: 0, chorus: 0, decay: 0.9 };
+// ── dreams: a very quiet glockenspiel in a soft, roomy space ──
+export const GLOCK_VOICE = { rich: 0.08, struck: 1, metal: 0.5, length: 1, hollow: 0, glide: 0, breath: 0, wobble: 0, chorus: 0, decay: 0.55 };
 
 const DREAM_KEY = 'tamagoji.dreamSound';
 let dreamOn = (() => {
@@ -183,36 +183,36 @@ export function setDreamSound(on) {
 
 let bus = null;
 /**
- * A dreamy room: little of the direct sound, much reverb (a made-up ~5 s tail of fading noise),
- * softened (high tones damped) and starting a moment late, so the notes seem far away.
+ * A roomy space: the direct sound plus a short, soft reverb (a made-up ~1.6 s tail of fading noise,
+ * high tones damped), so the notes sound roomy without lingering into each other.
  */
 function reverbBus(ac) {
   if (bus) return bus;
-  const len = Math.round(ac.sampleRate * 5);
+  const len = Math.round(ac.sampleRate * 1.6);
   const ir = ac.createBuffer(2, len, ac.sampleRate);
   for (let c = 0; c < 2; c++) {
     const d = ir.getChannelData(c);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5);
   }
   const conv = ac.createConvolver();
   conv.buffer = ir;
   const pre = ac.createDelay(0.2);
-  pre.delayTime.value = 0.06;
+  pre.delayTime.value = 0.025;
   const soft = ac.createBiquadFilter();
   soft.type = 'lowpass';
-  soft.frequency.value = 2800;
+  soft.frequency.value = 3600;
   const wet = ac.createGain();
-  wet.gain.value = 0.9;
+  wet.gain.value = 0.45;
   const dry = ac.createGain();
-  dry.gain.value = 0.25;
+  dry.gain.value = 0.7;
   bus = ac.createGain();
   bus.connect(dry).connect(ac.destination);
   bus.connect(pre).connect(conv).connect(soft).connect(wet).connect(ac.destination);
   return bus;
 }
 
-/** A dream sign's melody: very quiet glockenspiel, mostly reverb, stretched to last `durationMs`. */
+/** A dream sign's melody: very quiet glockenspiel in a roomy space, stretched to last `durationMs`. */
 export function playDreamMelody(tok, durationMs) {
   if (!dreamOn) return;
-  playMelody(tok, GLOCK_VOICE, 0.14, 0, { durationMs, reverb: true });
+  playMelody(tok, GLOCK_VOICE, 0.1, 0, { durationMs, reverb: true });
 }
