@@ -102,3 +102,4 @@
 | D95 | 2026-11-26 | Sleep clouds mostly in the lower part of the stage (denser towards the bottom), never as high as the logo (revises D94's whole height). | accepted | user |
 | D96 | 2026-11-26 | Tapping its eyes also counts as tapping the creature (an extra band 15–85% across, 20–46% down its frame). | accepted | user |
 | D97 | 2026-11-26 | The level moves at most one step per measurement (per long sleep) towards the level its complexity calls for, up or down; no jumps from 1 to 3. | accepted | user |
+| D98 | 2026-11-26 | Sleep clouds: 30% fewer (4 at full energy, 24 when empty), sizes 40–260 px with occasional big ones, steady arrival pace and placement where there is most room (no clumping), spread out when the sky fills at sleep start. | accepted | user |

@@ -100,11 +100,13 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
 - **While it sleeps** the keyboard slides away (the stage grows into its place) and slides back when it
   wakes. Any tap or swipe on the stage wakes it, always as your ❓ (D76). Woken with little energy, it
   soon nods off again by itself (the nod-off chance and idle time depend on energy).
-- **Sleep clouds**: ☁️ of different sizes (44–140 px) and opacity float slowly across the stage from
-  right to left (born outside on the right, gone outside on the left; ~10 px/s, bigger ones a bit
-  faster), mostly in the lower part (denser towards the bottom, never up at the logo), some behind the creature and some (fainter) in front of it. How
-  many: 6 at full energy up to 34 (a dense tapestry) when it's empty, smoothly in between, so they thin
-  out as it recovers. When it falls asleep the sky fills at once; when it wakes they fade away.
+- **Sleep clouds**: ☁️ float slowly across the stage from right to left (born outside on the right,
+  gone outside on the left; ~10 px/s, bigger ones a bit faster), mostly in the lower part (denser
+  towards the bottom, never up at the logo), some behind the creature and some (fainter) in front of
+  it. Sizes 40–260 px: mostly small and medium, now and then a big one. How many: 4 at full energy up
+  to 24 when it's empty, smoothly in between. They come in at a steady pace, each placed where there
+  is the most room, so they spread out instead of clumping; when it falls asleep the sky fills at once,
+  spread out; when it wakes they fade away.
 
 ## Dreams
 

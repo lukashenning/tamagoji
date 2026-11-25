@@ -364,14 +364,14 @@ function slideKeyboard(show) {
 // sleeping: clouds float slowly across the stage from right to left (born outside on the right,
 // gone outside on the left), some behind the creature, some in front of it. How many: from a few at
 // full energy to a dense tapestry when it's empty; it changes smoothly as its energy comes back.
-const CLOUDS_RESTED = 6; // clouds on the stage at full energy
-const CLOUDS_EMPTY = 34; // … and at no energy
-const clouds = []; // { node, x, y, w, speed, leaving }
+const CLOUDS_RESTED = 4; // clouds on the stage at full energy
+const CLOUDS_EMPTY = 24; // … and at no energy
+const clouds = []; // { node, x, y, size, w, speed, leaving }
 const cloudBack = document.getElementById('clouds-back');
 const cloudFront = document.getElementById('clouds-front');
 let cloudWant = 0;
 let lastCloudFrame = 0;
-let lastCloudBirth = 0;
+let nextCloudBirth = 0;
 
 function sleepClouds(tiredness) {
   const was = cloudWant;
@@ -389,30 +389,45 @@ function sleepClouds(tiredness) {
       }, 1600);
     }
   } else if (!was) {
-    // it just fell asleep (or the page opened while it sleeps): fill the sky at once
-    const W = el.stageWidth();
-    for (let i = clouds.length; i < cloudWant; i++) addCloud(Math.random() * W);
+    // it just fell asleep (or the page opened while it sleeps): fill the sky at once, spread out
+    for (let i = clouds.length; i < cloudWant; i++) addCloud(null);
+    nextCloudBirth = performance.now() + cloudGap() * (0.5 + Math.random());
   }
 }
 
+/** Milliseconds between new clouds, so that about cloudWant are on the stage at a time. */
+const cloudGap = () => (((el.stageWidth() + 200) / 12) * 1000) / Math.max(1, cloudWant);
+
+/** Height on the stage: mostly in the lower part, below the creature, never up at the logo. */
+const cloudHeight = (H) => H * (0.28 + 0.74 * Math.sqrt(Math.random()));
+
+/**
+ * A new cloud at x (null: anywhere across the stage). Its place is the best of a few random tries:
+ * the one farthest from the clouds already there (so they spread out instead of clumping).
+ */
 function addCloud(x) {
+  const W = el.stageWidth();
+  const H = el.stageHeight();
+  const size = 40 + 220 * Math.random() ** 2.5; // 40–260 px: mostly small and medium, now and then a big one
+  let best = null;
+  for (let k = 0; k < 8; k++) {
+    const cx = x === null ? Math.random() * W : x + size * 0.65;
+    const cy = cloudHeight(H);
+    const room = clouds.reduce((mn, c) => Math.min(mn, Math.hypot(cx - (c.x + c.w / 2), cy - (c.y + c.size / 2)) - (c.size + size) / 3), Infinity);
+    if (!best || room > best.room) best = { cx, cy, room };
+  }
   const node = document.createElement('span');
   node.className = 'cloud';
   node.textContent = '☁️';
-  const size = 44 + Math.random() ** 1.4 * 96; // 44–140 px, mostly smaller ones
   const front = Math.random() < 0.35; // some float in front of the creature
   node.style.fontSize = size.toFixed(0) + 'px';
   node.style.zIndex = String(Math.round(size));
   node.style.opacity = (front ? 0.22 + Math.random() * 0.3 : 0.35 + Math.random() * 0.45).toFixed(2);
-  const H = el.stageHeight();
-  // mostly in the lower part of the stage, below the creature, down to the bottom edge (cut off there
-  // is fine); never so high that they touch the logo
-  const centre = H * (0.28 + 0.74 * Math.sqrt(Math.random())); // denser towards the bottom
-  const c = { node, x, y: Math.max(H * 0.1, centre - size / 2), w: size * 1.3, speed: 5 + size * 0.07, leaving: false };
+  const w = size * 1.3;
+  const c = { node, size, w, x: best.cx - w / 2, y: Math.max(H * 0.1, best.cy - size / 2), speed: 5 + size * 0.045, leaving: false };
   node.style.transform = `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px)`; // in place from the start (no flash at the top left)
   (front ? cloudFront : cloudBack).append(node);
   clouds.push(c);
-  lastCloudBirth = performance.now();
 }
 
 function driftClouds(now) {
@@ -429,11 +444,10 @@ function driftClouds(now) {
     }
     c.node.style.transform = `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px)`;
   }
-  // new ones come in from the right, often enough to keep about cloudWant on the stage
-  const alive = clouds.filter((c) => !c.leaving).length;
-  if (cloudWant && alive < cloudWant) {
-    const crossing = (W + 120) / 11; // seconds an average cloud needs to cross
-    if (now - lastCloudBirth > (crossing / cloudWant) * 1000 * (0.5 + Math.random())) addCloud(W + 10 + Math.random() * 40);
+  // new ones come in from the right at a steady pace (a little irregular), about cloudWant on the stage
+  if (cloudWant && now >= nextCloudBirth) {
+    if (clouds.filter((c) => !c.leaving).length < cloudWant + 2) addCloud(W + 10);
+    nextCloudBirth = now + cloudGap() * (0.75 + 0.5 * Math.random());
   }
 }
 
