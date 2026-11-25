@@ -124,7 +124,7 @@ Bottom left (growing to the right): the real signs of the current exchange, your
 On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe through it (left ↔ right) = ✗**.
 Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,
 soft, hollow sound of your own (`PLAYER_VOICE`).
-Each also flashes the stage's background softly (on at once, ~1.4 s fade): green for ✓, red for ✗, white for ❓.
+Each also flashes the stage's background softly (on at once, ~2.2 s fade): green for ✓, red for ✗, white for ❓.
 
 ## Top 6 → seats → look and voice
 

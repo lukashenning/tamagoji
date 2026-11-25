@@ -107,13 +107,13 @@ function playerSend(tok) {
 }
 
 // a soft, quick flash of the background: ✓ green, ✗ red, ❓ white
-const FLASH = { [YES]: ['#7fd99a', 0.18], [NO]: ['#f08a8a', 0.15], [ASK]: ['#ffffff', 0.6] };
+const FLASH = { [YES]: ['#7fd99a', 0.11], [NO]: ['#f08a8a', 0.09], [ASK]: ['#ffffff', 0.45] };
 function flash(tok) {
   const node = document.getElementById('flash');
   const [color, peak] = FLASH[tok];
   node.style.background = color;
-  // on at once, then a long, soft fade (~1.4 s, fast at first, then lingering)
-  node.animate([{ opacity: peak, easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)' }, { opacity: 0 }], { duration: 1400 });
+  // on at once, then a long, soft fade (~2.2 s, fast at first, then lingering)
+  node.animate([{ opacity: peak, easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)' }, { opacity: 0 }], { duration: 2200 });
 }
 
 // ── gestures on the stage ──
