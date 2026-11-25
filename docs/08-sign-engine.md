@@ -32,9 +32,10 @@ retried sign joins the chain before it.
 Each repeat adds **+1** to that link. Its own signs are learned only through ✓ / ✗ (and a little
 in dreams).
 
-**Slow fading** (D67): while it's awake, every link drifts **0.03 towards 0 per turn of yours** (any
-input of yours counts as a turn). A +3 or −3 link is back at 0 after about 100 turns; a +30 link
-after about 1000. Not while it sleeps. Slider "fading".
+**Slow fading** (D67, D92): while it's awake, every link drifts **0.005 towards 0 per turn of yours**
+(any input of yours counts as a turn). A +3 or −3 link is back at 0 after about 600 turns (several
+sessions), a +1 link after 200. Not while it sleeps. Slider "fading". (Until D92 it was 0.03, which
+let it keep only about the last session's teaching.)
 
 ## Expecting the next sign: votes
 
@@ -68,7 +69,9 @@ For the current context, each level votes for the signs that followed that conte
      `a b c a b c` +10%, `abcd abcd abcd` +15% (total capped at 70%).
    - **+ waiting**: from your 4th ☐ in a row, +5% per further ☐ (max +40%), so it gets playful,
    - at most 70% in total.
-5. **Otherwise its expectation**; with no expectation at all (e.g. after a sign it has never seen
+5. **Otherwise its expectation**, but in **10%** of cases **cross-associated** (D92, slider): it
+   pretends the sign it picked had just been said and says what it would expect to follow that
+   instead (the user's idea; in simulation roughly neutral for complexity, a little more variety); with no expectation at all (e.g. after a sign it has never seen
    followed): mostly one of its **familiar signs**, its seats (its top signs; for a newborn its 6
    random seed emojis), by use, so it finds its way back into its patterns; sometimes a surprise.
 
@@ -103,9 +106,14 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
 
 ## Dreams
 
-It answers itself with the same rules (votes, repetition surprise), without ✓ ✗ ☐. On waking, the
-dreamed signs it got to are learned at **+0.1** each (sleep consolidates). Dreams don't count as
-its outputs.
+It answers itself with the same rules (votes, repetition surprise), without ✓ ✗ ☐ and without
+cross-association. On waking, the dreamed signs it got to are learned at **+0.1** each (sleep
+consolidates). Dreams don't count as its outputs.
+
+**Dream jumps (D92):** a dream surprise is not a keyboard emoji but a random sign it already knows a
+follower for (each equally likely), so the dream wanders through all of its memory instead of
+circling its strongest chains. Together with the slower fading this makes complexity grow with a
+growing, consistent language (docs/simulations/2026-11-26-complexity-fixes.md).
 
 **Proximity (D70).** Dreams also link each sign to its neighbours the other way round, at **+0.04**
 (`proximityWeight`, slider). In the dream C A B D E S G D, the D after B gets, besides the usual

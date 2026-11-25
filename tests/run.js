@@ -21,7 +21,7 @@ function pct(x) {
   return Number.isFinite(x) ? Math.round(x * 100) + '%' : '–';
 }
 
-const P = { ...DEFAULT_PARAMS, decayPerTurn: 0 }; // exact link values; fading is tested on its own
+const P = { ...DEFAULT_PARAMS, decayPerTurn: 0, crossAssociation: 0 }; // exact link values and plain picks
 const MIN = 60000;
 
 /** A newborn with a history we can append to. */

@@ -12,7 +12,7 @@ import { rngFor } from '../src/core/rng.js';
 import { player } from './player.js';
 
 const log = globalThis.print || console.log;
-const P = { ...DEFAULT_PARAMS };
+const P = { ...DEFAULT_PARAMS, ...(globalThis.SIM?.params || {}) }; // a wrapper can set globalThis.SIM = { params }
 const MIN = 60000;
 const pct = (x) => (Number.isFinite(x) ? Math.round(x * 100) + '%' : '–');
 

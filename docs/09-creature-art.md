@@ -21,8 +21,8 @@ part is shown yet or not.
 - "Most used" = in its last 1000 awake outputs. The parts are re-assigned at birth and after each
   sleep; until it has 7 top signs, its seed signs fill up.
 - **Level** comes from complexity (docs/08), set again at each measurement, so it can grow or shrink:
-  level 2 from complexity 6, level 3 from 10, level 4 from 15, level 5 from 21
-  (`levelAt`, a first guess for about 2 days of play to level 5; to be tuned). The lab panel can set a
+  level 2 from complexity 6, level 3 from 10, level 4 from 15, level 5 from 19
+  (`levelAt`; in simulation a consistent teacher reaches level 5 after about 2 days, D92). The lab panel can set a
   level directly (`level: auto 1 2 3 4 5`).
 
 ## Motion

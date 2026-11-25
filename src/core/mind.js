@@ -344,6 +344,17 @@ export class Mind {
   }
 
   /**
+   * Cross-association (crossAssociation, awake only): with chance `rate`, it doesn't say the sign
+   * `tok` it picked but pretends `tok` was just said and says what it expects to follow that instead.
+   * Returns the sign to say (tok itself if it expects nothing after it).
+   */
+  crossAssociate(tok, toks, rate, rng) {
+    if (!rate || rng() >= rate) return tok;
+    const ex = this.expect(this.context([...toks, tok]));
+    return ex.probs.length ? sample(ex.probs, rng) : tok;
+  }
+
+  /**
    * Its move: { tok, m, why }. Uses rng (not deterministic), but the result is written into the
    * history, so replay never needs to repeat it.
    */
@@ -378,12 +389,21 @@ export class Mind {
     // 4. surprise
     if (rng() < sp.total) return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: `surprise (${pct(sp.total)})` } };
 
-    // 5. its expectation, or with none its seed
+    // 5. its expectation, or with none its seed (sometimes cross-associated: what would follow it)
+    const toks = this.context();
+    const cross = (pick0) => this.crossAssociate(pick0, toks, p.crossAssociation, rng);
+    const crossWhy = (pick0) => `cross-association: would have said ${pick0}, says what follows it`;
     if (ex.probs.length) {
-      const tok = sample(ex.probs, rng);
+      const pick0 = sample(ex.probs, rng);
+      const tok = cross(pick0);
+      if (tok !== pick0) return { tok, m: 'expect', why: { ...base, mode: crossWhy(pick0) } };
       return { tok, m: 'expect', why: { ...base, mode: `expectation (${pct(ex.probs.find(([s]) => s === tok)[1])})` } };
     }
-    if (this.seats.length && rng() < p.seedWhenClueless) return { tok: this.familiar(rng), m: 'seed', why: { ...base, mode: 'no expectation: one of its familiar signs' } };
+    if (this.seats.length && rng() < p.seedWhenClueless) {
+      const pick0 = this.familiar(rng);
+      const tok = cross(pick0);
+      return { tok, m: 'seed', why: { ...base, mode: tok === pick0 ? 'no expectation: one of its familiar signs' : crossWhy(pick0) } };
+    }
     return { tok: this.paletteEmoji(rng, now), m: 'surprise', why: { ...base, mode: 'no expectation: a surprise' } };
   }
 
@@ -419,14 +439,32 @@ export class Mind {
     const rng = rngFor(this.seed, 'dream', this.sleepCount);
     const toks = this.seq.map((x) => x.tok);
     const out = [];
+    // dream jumps (D92): a dream surprise is usually a sign it knows a follower for (any of them,
+    // equally likely), not a keyboard emoji, so the dream visits all of its memory, not only the strongest part
+    const known = this.p.dreamJump ? this.knownStarts() : [];
+    const surprise = (i) => (known.length && rng() < this.p.dreamJump ? pick(known, rng) : this.paletteEmoji(rng, t0 + i * interval));
     for (let i = 0; i < count; i++) {
       const ex = this.expect(this.context(toks));
       let tok;
-      if (rng() < this.surpriseChance(toks, 0).total) tok = this.paletteEmoji(rng, t0 + i * interval);
+      if (rng() < this.surpriseChance(toks, 0).total) tok = surprise(i);
       else if (ex.probs.length) tok = sample(ex.probs, rng);
       else tok = this.seats.length ? this.familiar(rng) : this.paletteEmoji(rng, t0 + i * interval);
       out.push(tok);
       toks.push(tok);
+    }
+    return out;
+  }
+
+  /** Signs it knows at least one follower for (a positive level-1 link). */
+  knownStarts() {
+    const out = [];
+    for (const [k, row] of this.assoc.table) {
+      if (!k.startsWith('1|')) continue;
+      for (const e of row.values())
+        if (this.assoc.eff(e) > 0) {
+          out.push(k.slice(2));
+          break;
+        }
     }
     return out;
   }

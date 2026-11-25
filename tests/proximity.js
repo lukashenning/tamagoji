@@ -69,12 +69,14 @@ function play(P, seed) {
   return { cont, r, dreamt: m.stats.dreamLearned };
 }
 
-const weights = [0, 0.02, 0.04, 0.06, 0.1];
+// a wrapper can set globalThis.SIM = { variants: [{ label, params }] } to compare other settings
+const variants = globalThis.SIM?.variants || [0, 0.02, 0.04, 0.06, 0.1].map((w) => ({ label: w.toFixed(2), params: { proximityWeight: w } }));
 log(`${CREATURES} creatures × ${STEPS} steps per setting (same seeds)\n`);
-log('proximity │ in play: continues │ at the end: next after chain │ next after 1 sign │ previous after 1 sign');
-log('weight    │ your chain         │  expected   top choice       │  expected         │  expected   top choice');
-for (const w of weights) {
-  const P = { ...DEFAULT_PARAMS, proximityWeight: w };
+log('setting   │ in play: continues │ at the end: next after chain │ next after 1 sign │ previous after 1 sign');
+log('          │ your chain         │  expected   top choice       │  expected         │  expected   top choice');
+for (const v of variants) {
+  const P = { ...DEFAULT_PARAMS, ...v.params };
+  const w = v.label;
   const sum = { c: [0, 0], fwd: 0, fwdTop: 0, fwd1: 0, back: 0, backTop: 0, n: 0 };
   for (let seed = 1; seed <= CREATURES; seed++) {
     const { cont, r } = play(P, seed);
@@ -83,6 +85,6 @@ for (const w of weights) {
     for (const k of ['fwd', 'fwdTop', 'fwd1', 'back', 'backTop', 'n']) sum[k] += r[k];
   }
   log(
-    `${w.toFixed(2).padEnd(9)} │ ${pct(sum.c[0] / sum.c[1]).padEnd(18)} │ ${pct(sum.fwd / sum.n)}     ${pct(sum.fwdTop / sum.n)}           │ ${pct(sum.fwd1 / sum.n)}            │ ${pct(sum.back / sum.n)}     ${pct(sum.backTop / sum.n)}`,
+    `${String(w).padEnd(9)} │ ${pct(sum.c[0] / sum.c[1]).padEnd(18)} │ ${pct(sum.fwd / sum.n)}     ${pct(sum.fwdTop / sum.n)}           │ ${pct(sum.fwd1 / sum.n)}            │ ${pct(sum.back / sum.n)}     ${pct(sum.backTop / sum.n)}`,
   );
 }

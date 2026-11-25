@@ -20,7 +20,7 @@ const MIN = 60000;
 const HOUR = 60 * MIN;
 const DAYS = SIM.days || 4;
 const SESSIONS = [8, 12, 17, 21]; // hours of the day
-const CREATURES = 10;
+const CREATURES = SIM.creatures || 10;
 const START = Date.UTC(2027, 0, 4, 0, 0); // a Monday, 0:00
 
 // ── languages a player speaks ──
@@ -37,7 +37,7 @@ function language(chains) {
 
 // ── player styles ──
 // each: setup(rng, pool) -> state; session(state, day, s) at the start of each session; move(state, m, last, rng) -> token
-function chainPlayer({ feedback = true, ask = 0.2, judge = 0.35 } = {}) {
+function chainPlayer({ feedback = true, ask = 0.2, judge = 0.35, recent = 0 } = {}) {
   return (st, m, last, rng) => {
     const { next, chains } = st.lang;
     if (feedback && last && last.who === 'C' && !isElemental(last.tok) && rng() < judge) {
@@ -48,7 +48,8 @@ function chainPlayer({ feedback = true, ask = 0.2, judge = 0.35 } = {}) {
     const cur = m.seq[m.seq.length - 1]?.tok;
     const opts = next.get(cur);
     if (opts && (!last || last.who === 'C' || rng() < 0.9)) return opts[Math.floor(rng() * opts.length)];
-    const c = chains[Math.floor(rng() * chains.length)];
+    const from = recent ? chains.slice(-recent) : chains; // recent: starts only its newest chains
+    const c = from[Math.floor(rng() * from.length)];
     return c[0];
   };
 }
@@ -61,6 +62,12 @@ const STYLES = {
     setup: (st) => (st.lang = language([take(st, 4), take(st, 4), take(st, 4)])),
     session: (st) => (st.lang = language([...st.lang.chains, take(st, 4)])),
     move: chainPlayer(),
+  },
+  'teacher, only newest chains': {
+    note: 'same growing language with ✓/✗, but only starts its 2 newest chains (never revisits old ones)',
+    setup: (st) => (st.lang = language([take(st, 4), take(st, 4), take(st, 4)])),
+    session: (st) => (st.lang = language([...st.lang.chains, take(st, 4)])),
+    move: chainPlayer({ recent: 2 }),
   },
   'teacher without ✓/✗': {
     note: 'same growing language, but never judges',
@@ -158,8 +165,17 @@ function live(style, seed) {
   style.setup(st);
   let last = null;
   const sessions = [];
+  let cont = [0, 0]; // its replies right after your chain sign (that has a follower): [continued your chain, chances]
+  let used = new Set(); // its real signs this session
   const creatureMove = () => {
     const d = m.decide(rng, t);
+    const prev = last && last.who === 'P' && !isElemental(last.tok) ? last.tok : null;
+    const want = prev && st.lang ? st.lang.next.get(prev) : null;
+    if (want && m.awake) {
+      cont[1]++;
+      if (want.includes(d.tok)) cont[0]++;
+    }
+    if (m.awake && d.tok !== SLEEP && !isElemental(d.tok)) used.add(d.tok);
     o({ t, who: d.tok === SLEEP ? 'S' : 'C', tok: d.tok, ...(d.m ? { m: d.m } : {}) });
     last = { who: d.tok === SLEEP ? 'S' : 'C', tok: d.tok };
     t += 1000;
@@ -195,6 +211,8 @@ function live(style, seed) {
       style.session(st, day, s);
       // play until it nods off (a napping player keeps going, ~70 of your signs per session)
       let yours = 0;
+      cont = [0, 0];
+      used = new Set();
       for (let k = 0; k < 600; k++) {
         if (!m.awake) {
           if (!style.nap || yours >= 70) break;
@@ -219,8 +237,9 @@ function live(style, seed) {
         o({ t, who: 'S', tok: SLEEP });
       }
       const next = s + 1 < SESSIONS.length ? START + day * 24 * HOUR + SESSIONS[s + 1] * HOUR : START + (day + 1) * 24 * HOUR + SESSIONS[0] * HOUR;
+      if (SIM.onSleep && m.sleep) SIM.onSleep(m, st, day, s); // a wrapper can look at the dream
       restUntil(next - 1); // (this is where it measures, on waking)
-      sessions.push({ day, s, yours, kept, taught, c: m.complexity ? { ...m.complexity } : null, n: m.complexityLog.length });
+      sessions.push({ day, s, yours, kept, taught, cont: cont.slice(), distinct: used.size, c: m.complexity ? { ...m.complexity } : null, n: m.complexityLog.length });
     });
   }
   return { m, sessions };
@@ -254,6 +273,9 @@ for (const [name, runs] of Object.entries(results)) {
     );
   }
   log(perDay.join('\n'));
+  const contAll = runs.flatMap((r) => r.sessions).reduce((a, x) => [a[0] + x.cont[0], a[1] + x.cont[1]], [0, 0]);
+  const distinct = mean(runs.flatMap((r) => r.sessions.map((x) => x.distinct)));
+  log(`  awake: continues your chain ${contAll[1] ? f((100 * contAll[0]) / contAll[1], 0) + '%' : '–'} of its replies · ${f(distinct, 0)} different signs of its own per session`);
   const traj = Array.from({ length: DAYS * SESSIONS.length }, (_, i) => mean(runs.map((r) => r.sessions[i].c?.value).filter((v) => v !== undefined)));
   log(`  by session: ${traj.map((v) => f(v, 0)).join(' ')}`);
   const kept = Array.from({ length: DAYS * SESSIONS.length }, (_, i) => mean(runs.map((r) => r.sessions[i].kept)));
@@ -261,4 +283,16 @@ for (const [name, runs] of Object.entries(results)) {
   if (Number.isFinite(kept[0])) log(`  links of your language still in memory at bedtime / taught: ${kept.map((v, i) => f(v, 0) + '/' + f(taught[i], 0)).join(' ')}`);
   log('');
 }
+// a compact summary a wrapper can read (globalThis.SIM_RESULT)
+globalThis.SIM_RESULT = Object.fromEntries(
+  Object.entries(results).map(([name, runs]) => {
+    const day = (d) => {
+      const cs = runs.map((r) => r.sessions.filter((x) => x.day === d).at(-1).c).filter(Boolean);
+      const vals = cs.map((c) => c.value);
+      return { value: mean(vals), known: mean(cs.map((c) => c.known)), order: mean(cs.map((c) => c.order)), level: mean(vals.map((v) => levelFor(v, P.levelAt))), max: Math.max(...vals), at5: vals.filter((v) => levelFor(v, P.levelAt) >= 5).length, n: cs.length };
+    };
+    const ct = runs.flatMap((r) => r.sessions).reduce((a, x) => [a[0] + x.cont[0], a[1] + x.cont[1]], [0, 0]);
+    return [name, { days: Array.from({ length: DAYS }, (_, d) => day(d)), cont: ct[1] ? ct[0] / ct[1] : NaN, distinct: mean(runs.flatMap((r) => r.sessions.map((x) => x.distinct))), traj: Array.from({ length: DAYS * SESSIONS.length }, (_, i) => mean(runs.map((r) => r.sessions[i].c?.value).filter((v) => v !== undefined))) }];
+  }),
+);
 log(`(${((Date.now() - t0) / 1000).toFixed(0)} s)`);

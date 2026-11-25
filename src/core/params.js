@@ -1,13 +1,13 @@
 // All tunable numbers in one place. See docs/08-sign-engine.md.
 
-export const ENGINE_VERSION = '1.0.0-exp';
+export const ENGINE_VERSION = '1.1.0';
 
 export const DEFAULT_PARAMS = {
   // associations
   levels: 4, // context lengths 1…4
   levelGrowth: 1.5, // level weights 1, 1.5, 2.25, 3.4: each longer context counts 1.5×
   repeatWeight: 1, // each use of a sign after a context adds this to the link
-  decayPerTurn: 0.03, // while awake, every link drifts this much towards 0 per turn of yours (±3 → 0 in 100 turns)
+  decayPerTurn: 0.005, // while awake, every link drifts this much towards 0 per turn of yours (±3 → 0 in 600 turns; D92)
   temperature: 3, // chaos: how strongly more votes win (higher = more even)
 
   // ✓ / ✗ (yours and its own) on the last real sign's links
@@ -35,6 +35,7 @@ export const DEFAULT_PARAMS = {
   waitSurpriseMax: 0.4,
   surpriseMax: 0.7,
   seedWhenClueless: 0.7, // no expectation at all: one of its familiar (seat) signs (else a surprise)
+  crossAssociation: 0.1, // awake: chance that it says what would follow the sign it picked, instead of that sign (D92)
 
   // energy & sleep
   capacity: 80, // inputs until tired (~6 min)
@@ -45,6 +46,7 @@ export const DEFAULT_PARAMS = {
   fullRecoveryMin: 60, // empty → full; energy recovers steadily while sleeping
   dreamIntervalSec: 3, // one dream sign every few seconds
   dreamWeight: 0.1, // each dreamed sign is learned this much on waking
+  dreamJump: 1, // chance that a dream surprise jumps to a sign it knows a follower for, not a keyboard emoji (D92)
   proximityWeight: 0.04, // dreams also link each sign to its neighbours the other way round (D70)
   complexityDreamMin: 700, // a dream of at least this many learned signs updates its complexity (D75)
   complexityMinUses: 3, // a sign counts as known when it appears this often in those signs
@@ -57,7 +59,7 @@ export const DEFAULT_PARAMS = {
   // top signs → seats (look) and voice
   outputWindow: 1000, // ranked by use in its last this many outputs
   seats: 7, // one per part: eyes, hat, mouth, legs, arms, nose, object (D77)
-  levelAt: [6, 10, 15, 21], // complexity needed for levels 2…5 (rough: ~2 days of play to level 5)
+  levelAt: [6, 10, 15, 19], // complexity needed for levels 2…5 (a consistent teacher: level 5 in ~2 days; D92)
   objectMoveChance: 0.33, // each time it says something, its object moves to another spot with this chance
   levelOverride: 0, // lab panel: show this level (1–5) instead of the one from complexity; 0 = off
 
@@ -74,6 +76,7 @@ export const SLIDERS = [
   { key: 'noWeight', label: '✗ strength', min: 0, max: 10, step: 0.5 },
   { key: 'reactYes', label: 'its ✓ when you did what it expected', min: 0, max: 1, step: 0.05 },
   { key: 'surpriseBase', label: 'base surprise', min: 0, max: 0.5, step: 0.01 },
+  { key: 'crossAssociation', label: 'cross-association', min: 0, max: 0.5, step: 0.05 },
   { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.8, step: 0.01 },
   { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.5, step: 0.05 },
   { key: 'proximityWeight', label: 'dream proximity learning', min: 0, max: 0.2, step: 0.01 },
