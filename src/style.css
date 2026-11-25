@@ -236,3 +236,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .h-sys { font: 11px/1.6 ui-sans-serif, system-ui; color: var(--dim); padding: 0 6px !important; }
 
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; border: 1px solid var(--line); }
+
+/* ── game only (no lab panel): always on phones and tablets (and very narrow windows);
+   on desktop, Escape toggles it. The game then fills the whole window. ── */
+.game-only .layout { padding: 0; gap: 0; height: 100vh; height: 100dvh; }
+.game-only .panel { display: none; }
+.game-only .phone {
+  flex: 1;
+  width: 100%;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.game-only .flash { border-radius: 0; }
+.game-only .palette {
+  /* key size follows the screen: 8 keys across the width, the keyboard at most ~45% of the height,
+     between 34 and 84 px */
+  --cell: clamp(34px, min(calc((100vw - 60px) / 8), calc((45vh - 60px) / 4)), 84px);
+  justify-content: center;
+  gap: 24px;
+}
+.game-only .kb-grid {
+  grid-template-columns: repeat(4, var(--cell));
+  grid-auto-rows: var(--cell);
+  min-height: calc(4 * var(--cell) + 6px);
+}
+.game-only .em { font-size: calc(var(--cell) * 0.74); }
+.em { touch-action: manipulation; }

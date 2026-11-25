@@ -401,8 +401,25 @@ const palette = buildPalette(document.getElementById('palette'), {
 });
 gestures(document.querySelector('.stage'), el.creature);
 const updatePanel = buildPanel(document.getElementById('panel'), handlers);
+// game only, without the lab panel: always on phones and tablets (touch, no mouse) and very narrow
+// windows; on desktop, Escape switches between the game alone (whole window) and game + lab panel
+const touchDevice = matchMedia('(hover: none) and (pointer: coarse), (max-width: 700px)');
+let desktopGameOnly = false;
+const gameOnly = () => touchDevice.matches || desktopGameOnly;
+function applyLayout() {
+  document.documentElement.classList.toggle('game-only', gameOnly());
+}
+touchDevice.addEventListener?.('change', applyLayout);
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || touchDevice.matches) return;
+  desktopGameOnly = !desktopGameOnly;
+  applyLayout();
+  if (!gameOnly()) updatePanel(s);
+});
+applyLayout();
+
 load(loadCreature() || newCreature(Date.now(), s.params));
 setInterval(tick, 100);
-setInterval(() => updatePanel(s), 400);
+setInterval(() => gameOnly() || updatePanel(s), 400);
 tick();
 updatePanel(s);

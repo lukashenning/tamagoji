@@ -126,6 +126,11 @@ Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below it
 soft, hollow sound of your own (`PLAYER_VOICE`).
 Each also flashes the stage's background softly (full colour at once, eased fade, gone after 1 s): green for ✓, red for ✗, white for ❓.
 
+**Layout.** On phones and tablets (touch, no mouse) and in windows narrower than 700 px, only the game
+is shown, filling the whole screen; the keys grow with the screen (8 across, keyboard at most ~45% of
+the height, 34–84 px). On desktop, **Escape** switches between the game alone (whole window) and
+game + lab panel.
+
 ## Top 6 → seats → look and voice
 
 - Its signs are ranked by how often it used them in its **last 1000 outputs** (awake real signs,
