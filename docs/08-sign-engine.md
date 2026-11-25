@@ -119,7 +119,7 @@ The dream emojis rising above it come out at the 1× dream pace (one per 3 real 
 ## Your side: the corner row and gestures
 
 Bottom right: the real signs of the current exchange, yours and its (its dimmer), since your last
-✓ ✗ ❓; its own specials don't clear the row; it starts fresh after sleep. At most the last 6.
+✓ ✗ ❓; its own specials don't clear the row; it starts fresh after sleep. At most the last 5.
 
 On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe through it (left ↔ right) = ✗**.
 Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,

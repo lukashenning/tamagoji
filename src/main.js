@@ -198,7 +198,7 @@ function lastEntry(who) {
 
 /** The bottom-right row: the real signs of the current exchange, yours and its (its dimmer), since
  * your last ✓ ✗ ❓ (they break the sequence; its own don't clear the row). Starts fresh after sleep. */
-const ROW_MAX = 6;
+const ROW_MAX = 5;
 function exchangeRow() {
   const h = s.save.history;
   const row = [];
