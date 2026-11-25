@@ -5,11 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tamago-ji</title>
     <link rel="manifest" href="manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap" />
     <link rel="stylesheet" href="src/style.css" />
   </head>
   <body>
     <main class="layout">
       <section class="phone">
+        <button class="logo" id="logo" type="button" aria-label="Tamagoji: start a new creature">
+          <svg viewBox="0 0 400 74" aria-hidden="true">
+            <text x="200" y="56" text-anchor="middle" textLength="384" lengthAdjust="spacingAndGlyphs" rotate="-6 4 -3 5 -5 3 -4 6"><tspan class="l1">T</tspan><tspan class="l2">A</tspan><tspan class="l3">M</tspan><tspan class="l4">A</tspan><tspan class="l5">G</tspan><tspan class="l6">O</tspan><tspan class="l1">J</tspan><tspan class="l2">I</tspan></text>
+          </svg>
+        </button>
         <div class="stage">
           <div class="flash" id="flash"></div>
           <div class="bubble empty" id="bubble"><span id="bubble-emoji"></span><span id="bubble-mark"></span></div>
@@ -18,6 +26,16 @@
           <div class="you" id="you"></div>
         </div>
         <div class="palette" id="palette"></div>
+        <div class="confirm" id="confirm" hidden>
+          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-text">
+            <div class="confirm-egg">🥚</div>
+            <p id="confirm-text">Start over with a new creature?<br /><span>The current one will be gone.</span></p>
+            <div class="confirm-buttons">
+              <button type="button" id="confirm-no">Keep it</button>
+              <button type="button" id="confirm-yes" class="danger">New creature</button>
+            </div>
+          </div>
+        </div>
       </section>
       <aside class="panel" id="panel"></aside>
     </main>

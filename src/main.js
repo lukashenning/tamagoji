@@ -389,6 +389,16 @@ const handlers = {
   },
 };
 
+// ── logo: tap it to start over with a new creature (after asking) ──
+const confirmBox = document.getElementById('confirm');
+document.getElementById('logo').addEventListener('click', () => (confirmBox.hidden = false));
+document.getElementById('confirm-no').addEventListener('click', () => (confirmBox.hidden = true));
+document.getElementById('confirm-yes').addEventListener('click', () => {
+  confirmBox.hidden = true;
+  handlers.reset();
+});
+confirmBox.addEventListener('click', (e) => e.target === confirmBox && (confirmBox.hidden = true)); // tap outside: keep it
+
 // ── start ──
 const palette = buildPalette(document.getElementById('palette'), {
   onPick: playerSend,
@@ -411,7 +421,9 @@ function applyLayout() {
 }
 touchDevice.addEventListener?.('change', applyLayout);
 addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || touchDevice.matches) return;
+  if (e.key !== 'Escape') return;
+  if (!confirmBox.hidden) return void (confirmBox.hidden = true); // Escape closes the question first
+  if (touchDevice.matches) return;
   desktopGameOnly = !desktopGameOnly;
   applyLayout();
   if (!gameOnly()) updatePanel(s);

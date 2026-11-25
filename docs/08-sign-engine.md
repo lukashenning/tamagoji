@@ -131,6 +131,9 @@ is shown, filling the whole screen; the keys grow with the screen (8 across, key
 the height, 34–84 px). On desktop, **Escape** switches between the game alone (whole window) and
 game + lab panel.
 
+**Logo.** "TAMAGOJI" across the top of the game view; tapping it asks whether to start over with a new
+creature (the lab panel's reset button does it right away).
+
 ## Top 6 → seats → look and voice
 
 - Its signs are ranked by how often it used them in its **last 1000 outputs** (awake real signs,

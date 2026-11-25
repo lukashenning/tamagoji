@@ -41,6 +41,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 .panel {
   flex: 1;
@@ -263,3 +264,68 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .game-only .em { font-size: calc(var(--cell) * 0.74); }
 .em { touch-action: manipulation; }
+
+/* ── logo: TAMAGOJI across the top; tap it to start over (with a question first) ── */
+.logo {
+  flex: none;
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  align-self: center;
+  margin: 0;
+  padding: 14px 14px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.logo svg { display: block; width: 100%; height: auto; overflow: visible; }
+.logo text {
+  font: 54px 'Mochiy Pop One', 'Arial Rounded MT Bold', 'Baloo 2', ui-rounded, system-ui, sans-serif;
+  stroke: #6b4a55;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+.logo .l1 { fill: #f7a8bb; }
+.logo .l2 { fill: #ffd29a; }
+.logo .l3 { fill: #fff09a; }
+.logo .l4 { fill: #b8e8c2; }
+.logo .l5 { fill: #a9d8f5; }
+.logo .l6 { fill: #d6c2f2; }
+.logo:active svg { transform: scale(0.97); }
+.logo svg { transition: transform 0.15s; }
+
+.confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(59, 58, 64, 0.25);
+}
+.confirm[hidden] { display: none; }
+.confirm-card {
+  width: 100%;
+  max-width: 300px;
+  padding: 20px 18px 16px;
+  border-radius: 24px;
+  background: var(--phone);
+  box-shadow: 0 10px 40px rgba(60, 40, 30, 0.2);
+  text-align: center;
+}
+.confirm-egg { font: 40px/1 var(--emoji); }
+.confirm-card p { margin: 10px 0 16px; font-size: 15px; font-weight: 600; }
+.confirm-card p span { font-size: 13px; font-weight: 400; color: var(--dim); }
+.confirm-buttons { display: flex; gap: 8px; }
+.confirm-buttons button {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 14px;
+}
+.confirm-buttons .danger { background: #f7c8d0; border-color: #eeb0bc; font-weight: 600; }
