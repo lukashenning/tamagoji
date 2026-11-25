@@ -6,16 +6,21 @@ identity (behaviour, later its appearance) should follow from its **token histor
 
 ## Current phase
 
-**Branch `experiment`: the sign engine (engine 1.0-exp, 2026-11-24)**, described in
-`docs/08-sign-engine.md`. A complete replacement of the engine from the user's sketch: associations on
-levels 1–4 (votes, longer contexts count double), ✓/✗ on the last real sign (+3/−3, negative links),
-its own ✓/✗ (your ✗ inverts, ✓ repeats), "not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure,
-surprise (10% base + repetition + waiting), ☐ chaining, dreams (+0.1, plus proximity links the other
-way round at +0.04, D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice.
-Gestures: tap creature ✓, tap around ❓, swipe through ✗ (2026-11-25). Own browser storage (`tamagoji.creature.exp1`). Rule checks over
-simulated play: `jsc -m tests/play.js` (40 creatures × 1500 steps, ~7 s); proximity vs sequence
-learning: `jsc -m tests/proximity.js` (~10 s). `sim/` is not
-updated for it. `main` stays at v0.13 (below).
+**v1.0: the sign engine (engine 1.0, merged into `main` 2026-11-25)**, described in
+`docs/08-sign-engine.md`. Built on branch `experiment` as a complete replacement of the 0.13 engine
+from the user's sketch: associations on levels 1–4 (votes, longer contexts count ×1.5 per level),
+✓/✗ on the last real sign (+3/−3, negative links), its own ✓/✗ (your ✗ inverts, ✓ repeats),
+"not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure, surprise (10% base + repetition +
+waiting), ☐ chaining, slow fading, dreams (+0.1, plus proximity links the other way round at +0.04,
+D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice. UI: tap creature ✓,
+tap around ❓, swipe through ✗, soft flashes, exchange row bottom left; phones/tablets game-only,
+Escape toggles game-only on desktop (D71). Browser storage `tamagoji.creature.exp1` (kept so the
+user's creature survives). Rule checks over simulated play: `jsc -m tests/play.js` (40 creatures ×
+1500 steps, ~7 s); proximity vs sequence learning: `jsc -m tests/proximity.js` (~10 s). `sim/` is
+not updated for it.
+Next: the user plays it.
+
+The text below describes the previous engine (0.13, tag `v0.13`, code no longer on `main`):
 
 **Prototype 0.13 on the simple core of 0.6** (2026-11-23), described in `docs/07-simple-core.md`. The user found
 v0.5 too complex and not working well, so it was stripped down:
@@ -37,7 +42,6 @@ In 0.11: gradual look (blended traits, half-way per sleep) and a continuous synt
 In 0.12: after ❌ a more surprising retry, and ✅ after it teaches "not that, this" (D64).
 In 0.13: ❌ takes the rejected emoji back out of the sequence; rankings use pattern strength, so
 new emojis can gradually overtake old ones (D65).
-Next: the user plays it.
 
 **Keep it simple.** The user strongly prefers a small, transparent system. Don't add mechanisms
 back without being asked. Prefer tuning existing parameters.
@@ -74,8 +78,8 @@ back without being asked. Prefer tuning existing parameters.
 | `docs/02-technology-options.md` | Model options, recommended architecture, storage, stack, experiment tooling |
 | `docs/03-open-questions.md` | Q&A tracker |
 | `docs/04-decisions.md` | Decisions log |
-| `docs/08-sign-engine.md` | **Branch `experiment`**: the sign engine (replaces 07 there) |
-| `docs/07-simple-core.md` | **Current design** (0.6): the simple core |
+| `docs/08-sign-engine.md` | **Current design** (v1.0): the sign engine (replaces 07) |
+| `docs/07-simple-core.md` | Design of 0.6–0.13: the simple core (superseded by 08) |
 | `docs/05-system-design.md` | Design of v0.1–0.5 (mostly superseded by 07) |
 | `docs/06-proposals-v6.md` | v0.5 changes after the first broad test (superseded by 07) |
 | `docs/simulations/` | Simulation reports |
