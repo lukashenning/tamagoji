@@ -63,6 +63,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
   touch-action: none; /* all swipes reach the game (✗ = swipe sideways), nothing scrolls */
   cursor: pointer;
 }
+/* while it sleeps: mute / unmute the dream melodies (top right, below the logo) */
+.dream-mute {
+  position: absolute;
+  top: 4px;
+  right: 14px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dream-mute[hidden] { display: none; }
+.dream-mute svg { display: block; width: 100%; height: 100%; }
 .creature {
   /* no body: the parts (src/ui/creature.js) make up the creature. All parts share one frame and
      stack; the object stands to its right, outside the layout. */

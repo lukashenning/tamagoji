@@ -9,7 +9,7 @@ import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
 import { buildCreature } from './ui/creature.js';
-import { playMelody, playDreamMelody, unlockAudio, setSound, soundOn } from './ui/sound.js';
+import { playMelody, playDreamMelody, dreamSoundOn, setDreamSound, unlockAudio, setSound, soundOn } from './ui/sound.js';
 import { newCreature, loadCreature, saveCreature, loadParams, saveParams, exportFile, importFile } from './ui/store.js';
 
 // ── clock (with fast-forward for testing) ──
@@ -311,6 +311,8 @@ function render() {
     renderRow(exchangeRow());
   }
 
+  muteBtn.hidden = m.awake; // the dream mute button only while it sleeps
+
   // keyboard: most recent emojis | the hour's random set (✅ ❌ ❓ are gestures, not keys).
   // It slides away while it sleeps and slides back when it wakes.
   palette.setRecent(recentEmojis(s.save.history));
@@ -450,6 +452,26 @@ document.getElementById('confirm-yes').addEventListener('click', () => {
   handlers.reset();
 });
 confirmBox.addEventListener('click', (e) => e.target === confirmBox && (confirmBox.hidden = true)); // tap outside: keep it
+
+// ── dream sounds: mute / unmute (shown while it sleeps; remembered on this device) ──
+const muteBtn = document.getElementById('dream-mute');
+const SPEAKER = '<path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>';
+function drawMute() {
+  const on = dreamSoundOn();
+  muteBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${SPEAKER}${
+    on ? '<path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10"/>' : '<path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/>'
+  }</svg>`;
+  muteBtn.setAttribute('aria-label', on ? 'Mute dream sounds' : 'Unmute dream sounds');
+}
+drawMute();
+// its own taps must not reach the stage (where a tap would wake the creature)
+for (const type of ['pointerdown', 'pointerup', 'pointercancel']) muteBtn.addEventListener(type, (e) => e.stopPropagation());
+muteBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  unlockAudio();
+  setDreamSound(!dreamSoundOn());
+  drawMute();
+});
 
 // ── start ──
 const look = buildCreature(el.creature);

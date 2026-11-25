@@ -92,3 +92,4 @@
 | D85 | 2026-11-25 | The object changes its spot only with a 33% chance each time the creature says something (objectMoveChance), not every time. | accepted | user |
 | D86 | 2026-11-25 | "On its nose" is no longer one of the object's spots (7 left). | accepted | user |
 | D87 | 2026-11-25 | ✗ = a sideways swipe anywhere on the stage (no longer only through the creature). On phones the app can't be dragged (touch-action none, fixed body, no overscroll). Dream signs play their melody as a quiet glockenspiel with reverb, stretched to the dream interval (3 s). | accepted | user |
+| D88 | 2026-11-25 | Dream glockenspiel much quieter (0.14) and dreamier (mostly reverb: 5 s soft tail, low-passed, pre-delay, little dry sound). A mute/unmute speaker button for the dream sounds appears top right while it sleeps (remembered per device). | accepted | user |
