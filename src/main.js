@@ -87,23 +87,9 @@ function playerSend(tok) {
     tok = ASK;
   } else if (m.turn !== 'P') return;
   append({ t: s.clock.now(), who: 'P', tok });
-  if (ELEMENTALS.includes(tok)) {
-    playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
-    flash(tok);
-  }
+  if (ELEMENTALS.includes(tok)) playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
   s.replyAt = null;
   render();
-}
-
-// a soft, quick flash of the background: ✓ green, ✗ red, ❓ white
-const FLASH = { [YES]: ['#7fd99a', 0.11], [NO]: ['#f08a8a', 0.09], [ASK]: ['#ffffff', 0.45] };
-function flash(tok) {
-  const node = document.getElementById('flash');
-  const [color, peak] = FLASH[tok];
-  node.style.background = color;
-  // full colour at once (no fade-in), then an eased fade: gone after 1 s
-  node.getAnimations().forEach((a) => a.cancel());
-  node.animate([{ opacity: peak }, { opacity: 0 }], { duration: 1000, easing: 'ease-in-out' });
 }
 
 // ── gestures on the stage ──

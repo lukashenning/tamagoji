@@ -130,7 +130,6 @@ plus its newest try, until you send something other than ✗ (the "not that, thi
 On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe through it (left ↔ right) = ✗**.
 Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,
 soft, hollow sound of your own (`PLAYER_VOICE`).
-Each also flashes the stage's background softly (full colour at once, eased fade, gone after 1 s): green for ✓, red for ✗, white for ❓.
 
 **Layout.** On phones and tablets (touch, no mouse) and in windows narrower than 700 px, only the game
 is shown, filling the whole screen; the keys grow with the screen (8 across, keyboard at most ~45% of

@@ -62,16 +62,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 14px;
   touch-action: pan-y; /* horizontal swipes reach the page (✗ = swipe through the creature) */
   cursor: pointer;
-  z-index: 0; /* so the flash sits behind the creature but above the phone's background */
-}
-/* a soft, quick flash behind everything when you send ✓ (green), ✗ (red), ❓ (white) */
-.flash {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: 36px 36px 0 0;
-  opacity: 0;
-  pointer-events: none;
 }
 .creature {
   /* no body: the parts (src/ui/creature.js) make up the creature. All parts share one frame and
@@ -266,7 +256,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: 0;
   box-shadow: none;
 }
-.game-only .flash { border-radius: 0; }
 .game-only .palette {
   /* key size follows the screen: 8 keys across the width, the keyboard at most ~45% of the height,
      between 34 and 84 px */
