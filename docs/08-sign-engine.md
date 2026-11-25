@@ -118,6 +118,8 @@ At 0.1 the sequence learning starts to suffer (next after one sign 68%, was 96%)
 
 The dream emojis rising above it come out at the 1× dream pace (one per 3 real seconds, rising in
 9 s), also when time runs faster; then each shows the dream sign of that moment.
+Each one also plays its melody as a quiet glockenspiel with reverb, slowed down so it lasts exactly
+until the next dream emoji appears (3 s instead of 0.5 s).
 
 ## Your side: the corner row and gestures
 
@@ -127,7 +129,8 @@ answer with ✗ (also several times), it keeps showing what came before the sign
 plus its newest try, until you send something other than ✗ (the "not that, this" context); it starts fresh after sleep. At most the last 5.
 
 ✓ ✗ ❓ are not on the keyboard (both halves are 16 emojis); you give them only with gestures.
-On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe through it (left ↔ right) = ✗**.
+On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe sideways anywhere on the stage = ✗**.
+On phones the app stays put (no dragging, rubber-banding or pull-to-refresh).
 Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,
 soft, hollow sound of your own (`PLAYER_VOICE`).
 

@@ -132,9 +132,16 @@ function playNote(ac, out, freq, t, step, v, volume) {
   const ring = 0.008 + v.struck * 0.05;
   note.gain.setValueAtTime(0.0001, t);
   note.gain.linearRampToValueAtTime(peak, t + attack);
-  note.gain.setTargetAtTime(peak * (1 - 0.85 * v.struck), t + attack, 0.03);
-  note.gain.setTargetAtTime(0.0001, t + len, ring);
-  const stopAt = t + len + ring * 6;
+  let stopAt;
+  if (v.decay) {
+    // a struck bar ringing out on its own (glockenspiel): one long natural fade
+    note.gain.setTargetAtTime(0.0001, t + attack, v.decay);
+    stopAt = t + attack + v.decay * 6;
+  } else {
+    note.gain.setTargetAtTime(peak * (1 - 0.85 * v.struck), t + attack, 0.03);
+    note.gain.setTargetAtTime(0.0001, t + len, ring);
+    stopAt = t + len + ring * 6;
+  }
   stops.forEach((o) => o.stop(stopAt));
   if (lfo) lfo.stop(stopAt);
 }
@@ -143,13 +150,42 @@ function playNote(ac, out, freq, t, step, v, volume) {
  * Play the melody of `tok` in a voice (src/core/voice.js): the creature's signs in its voice, your
  * ✓ ✗ ❓ in PLAYER_VOICE an octave lower. `volume` 0…1, `octave` shifts by whole octaves.
  */
-export function playMelody(tok, voice = DEFAULT_VOICE, volume = 1, octave = 0) {
+export function playMelody(tok, voice = DEFAULT_VOICE, volume = 1, octave = 0, { durationMs = MELODY_MS, reverb = false } = {}) {
   if (!enabled) return;
   const ac = audio();
   if (!ac) return;
-  const step = MELODY_MS / MELODY_STEPS / 1000;
+  const step = durationMs / MELODY_STEPS / 1000;
   const t0 = ac.currentTime + 0.02;
+  const out = reverb ? reverbBus(ac) : ac.destination;
   melodyFor(tok).forEach((freq, i) => {
-    if (freq) playNote(ac, ac.destination, freq * Math.pow(2, octave), t0 + i * step, step, voice, volume);
+    if (freq) playNote(ac, out, freq * Math.pow(2, octave), t0 + i * step, step, voice, volume);
   });
+}
+
+// ── dreams: a quiet glockenspiel in a big room ──
+export const GLOCK_VOICE = { rich: 0.08, struck: 1, metal: 0.5, length: 1, hollow: 0, glide: 0, breath: 0, wobble: 0, chorus: 0, decay: 0.7 };
+
+let bus = null;
+/** Dry sound plus a reverb (a made-up room: ~2.5 s of fading noise as the impulse response). */
+function reverbBus(ac) {
+  if (bus) return bus;
+  const len = Math.round(ac.sampleRate * 2.5);
+  const ir = ac.createBuffer(2, len, ac.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = ir.getChannelData(c);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  }
+  const conv = ac.createConvolver();
+  conv.buffer = ir;
+  const wet = ac.createGain();
+  wet.gain.value = 0.55;
+  bus = ac.createGain();
+  bus.connect(ac.destination); // dry
+  bus.connect(conv).connect(wet).connect(ac.destination);
+  return bus;
+}
+
+/** A dream sign's melody: quiet glockenspiel with reverb, stretched to last `durationMs`. */
+export function playDreamMelody(tok, durationMs) {
+  playMelody(tok, GLOCK_VOICE, 0.35, 0, { durationMs, reverb: true });
 }

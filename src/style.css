@@ -60,7 +60,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   align-items: center;
   justify-content: center;
   gap: 14px;
-  touch-action: pan-y; /* horizontal swipes reach the page (✗ = swipe through the creature) */
+  touch-action: none; /* all swipes reach the game (✗ = swipe sideways), nothing scrolls */
   cursor: pointer;
 }
 .creature {
@@ -249,6 +249,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
    on desktop, Escape toggles it. The game then fills the whole window. ── */
 .game-only .layout { padding: 0; gap: 0; height: 100vh; height: 100dvh; }
 .game-only .panel { display: none; }
+/* the game stays put: no dragging, rubber-banding or pull-to-refresh of the whole app */
+.game-only,
+.game-only body { overflow: hidden; overscroll-behavior: none; }
+.game-only body { position: fixed; inset: 0; }
+.game-only .phone { touch-action: none; }
 .game-only .phone {
   flex: 1;
   width: 100%;

@@ -91,3 +91,4 @@
 | D84 | 2026-11-25 | The coloured background flash for your ✓ ✗ ❓ is removed (the melody stays). | accepted | user |
 | D85 | 2026-11-25 | The object changes its spot only with a 33% chance each time the creature says something (objectMoveChance), not every time. | accepted | user |
 | D86 | 2026-11-25 | "On its nose" is no longer one of the object's spots (7 left). | accepted | user |
+| D87 | 2026-11-25 | ✗ = a sideways swipe anywhere on the stage (no longer only through the creature). On phones the app can't be dragged (touch-action none, fixed body, no overscroll). Dream signs play their melody as a quiet glockenspiel with reverb, stretched to the dream interval (3 s). | accepted | user |

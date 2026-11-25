@@ -9,7 +9,7 @@ import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
 import { buildCreature } from './ui/creature.js';
-import { playMelody, unlockAudio, setSound, soundOn } from './ui/sound.js';
+import { playMelody, playDreamMelody, unlockAudio, setSound, soundOn } from './ui/sound.js';
 import { newCreature, loadCreature, saveCreature, loadParams, saveParams, exportFile, importFile } from './ui/store.js';
 
 // ── clock (with fast-forward for testing) ──
@@ -93,38 +93,27 @@ function playerSend(tok) {
 }
 
 // ── gestures on the stage ──
-// tap the creature = ✓ · tap anywhere around it = ❓ · swipe through it (left↔right) = ✗
+// tap the creature = ✓ · tap anywhere around it = ❓ · swipe left or right anywhere on the stage = ✗
 function gestures(stage, creature) {
   let g = null;
   const inside = (r, x, y) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   stage.addEventListener('pointerdown', (e) => {
     if (e.button > 0) return;
-    g = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), through: false, far: false };
+    g = { x0: e.clientX, y0: e.clientY, t0: performance.now(), far: false };
     stage.setPointerCapture?.(e.pointerId);
   });
   stage.addEventListener('pointermove', (e) => {
-    if (!g) return;
-    const r = creature.getBoundingClientRect();
-    const cx = (r.left + r.right) / 2;
-    // did this stretch of the path cross its middle, at its height?
-    if ((g.x - cx) * (e.clientX - cx) <= 0 && g.x !== e.clientX) {
-      const y = g.y + ((cx - g.x) / (e.clientX - g.x)) * (e.clientY - g.y);
-      if (y >= r.top && y <= r.bottom) g.through = true;
-    }
-    g.x = e.clientX;
-    g.y = e.clientY;
-    if (Math.hypot(g.x - g.x0, g.y - g.y0) > 12) g.far = true;
+    if (g && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) > 12) g.far = true;
   });
   const end = (e) => {
     if (!g) return;
     const d = g;
     g = null;
     if (e.type === 'pointercancel') return;
-    const r = creature.getBoundingClientRect();
     const dx = e.clientX - d.x0;
     const dy = e.clientY - d.y0;
-    if (!d.far && performance.now() - d.t0 < 700) playerSend(inside(r, d.x0, d.y0) ? YES : ASK);
-    else if (d.through && Math.abs(dx) > Math.max(40, 1.5 * Math.abs(dy))) playerSend(NO);
+    if (!d.far && performance.now() - d.t0 < 700) playerSend(inside(creature.getBoundingClientRect(), d.x0, d.y0) ? YES : ASK);
+    else if (Math.abs(dx) > Math.max(40, 1.5 * Math.abs(dy))) playerSend(NO); // a mostly sideways swipe
   };
   stage.addEventListener('pointerup', end);
   stage.addEventListener('pointercancel', end);
@@ -271,6 +260,8 @@ function showDream(m) {
   node.textContent = tok;
   el.dreams.append(node);
   flying.push({ node, born: t });
+  // its melody, slowed to last exactly until the next dream sign appears
+  playDreamMelody(tok, s.params.dreamIntervalSec * 1000);
 }
 
 function clearDreams() {
@@ -477,6 +468,8 @@ function applyLayout() {
   document.documentElement.classList.toggle('game-only', gameOnly());
 }
 touchDevice.addEventListener?.('change', applyLayout);
+// the game stays put on phones: no dragging the whole app up or down (iOS needs this besides the CSS)
+document.addEventListener('touchmove', (e) => gameOnly() && e.cancelable && e.preventDefault(), { passive: false });
 addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!confirmBox.hidden) return void (confirmBox.hidden = true); // Escape closes the question first
