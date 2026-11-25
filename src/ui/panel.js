@@ -6,6 +6,7 @@ import { SLEEP, WAKE, BIRTH } from '../core/tokens.js';
 import { melodyText, keyOf, KEY_NAMES } from '../core/melody.js';
 import { voiceFor, voiceText } from '../core/voice.js';
 import { soundOn } from './sound.js';
+import { PART_EMOJI, lookOf, partsShown, levelFor, moveText } from '../core/look.js';
 
 const pct = (x) => (x * 100).toFixed(0) + '%';
 const num = (x, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : '–');
@@ -37,6 +38,10 @@ export function buildPanel(root, h) {
         <button data-act="hear">▶ its voice</button>
         <button data-act="instruments">▶ archetypes</button>
         <span class="note"></span>
+      </div>
+      <div class="row"><b>level</b>
+        <button data-level="0">auto</button>
+        ${[1, 2, 3, 4, 5, 6].map((n) => `<button data-level="${n}">${n}</button>`).join('')}
         <input type="file" accept="application/json,.json" hidden>
       </div>
       <div class="sliders">
@@ -64,6 +69,7 @@ export function buildPanel(root, h) {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.warp) return h.setWarp(Number(b.dataset.warp));
+    if (b.dataset.level) return h.setParam('levelOverride', Number(b.dataset.level)); // 0 = from complexity
     const act = b.dataset.act;
     if (act === 'skip10') h.skip(10 * 60000);
     if (act === 'skip60') h.skip(60 * 60000);
@@ -92,6 +98,7 @@ export function buildPanel(root, h) {
   function syncControls(s) {
     soundBtn.textContent = soundOn() ? 'sound on' : 'sound off';
     root.querySelectorAll('[data-warp]').forEach((b) => b.classList.toggle('on', Number(b.dataset.warp) === s.clock.warp));
+    root.querySelectorAll('[data-level]').forEach((b) => b.classList.toggle('on', Number(b.dataset.level) === (s.params.levelOverride || 0)));
     for (const sl of SLIDERS) {
       const inp = root.querySelector(`input[data-key="${sl.key}"]`);
       if (document.activeElement !== inp) inp.value = s.params[sl.key];
@@ -185,23 +192,32 @@ export function buildPanel(root, h) {
       }</div>
     </section>`);
 
-    // ── top signs → seats (look) & voice ──
+    // ── top signs → parts (look) & voice ──
     const ranked = m.topSigns();
-    const liveUses = new Map(ranked.map((r) => [r.tok, r.uses]));
     const top = ranked.slice(0, 10).map((r, i) => pill(`${i < p.seats ? '' : '<span class="dim">'}${r.tok} ${r.uses}${i < p.seats ? '' : '</span>'}`)).join(' ');
-    const seatRows = m.seats
-      .map((x) => `<tr><td>${x.seat}</td><td><span class="swatch" style="background:${x.color}"></span> ${x.tok} · style ${x.style + 1}/8 · hue ${x.hue}° · used ${liveUses.get(x.tok) || 0}×</td></tr>`)
+    const lvl = m.shownLevel();
+    const shown = partsShown(lvl);
+    const styles = (part) => s.styleCount?.(part) || 1; // how many styles the art has for that part
+    const partRows = m.seats
+      .map((x, i) => {
+        const l = lookOf(x.tok, styles(x.seat));
+        const off = i >= shown ? ' class="dim"' : '';
+        return `<tr${off}><td>${i + 1}. ${PART_EMOJI[i]} ${x.seat}</td><td>${x.tok} · style ${l.style + 1}/${styles(x.seat)} · <span class="swatch" style="background:${l.color}"></span> gbc1 #${l.colorIndex + 1} · used ${x.uses}× · variant ${m.pose[i]}${i >= shown ? ' · from level ' + i : ''}</td></tr>`;
+      })
       .join('');
-    const lastTok = (() => {
+    const lastC = (() => {
       for (let i = s.save.history.length - 1; i >= 0; i--) if (s.save.history[i].who === 'C') return s.save.history[i].tok;
       return null;
     })();
-    out.push(`<section><h3>top signs · seats · voice</h3>
+    const auto = m.complexity ? `complexity ${num(m.complexity.value, 1)} → level ${levelFor(m.complexity.value, p.levelAt)}` : 'no complexity measured yet → level 1';
+    out.push(`<section><h3>look · parts · voice</h3>
+      <div><b>level ${lvl}</b> <span class="dim">(${p.levelOverride ? 'set in the panel; auto would be ' + m.level : 'auto'} · ${auto} · levels 2–6 from complexity ${p.levelAt.join(' / ')})</span></div>
+      <div>pose now: <b>${moveText(m.pose)}</b>${lastC && m.moves.has(lastC) ? ` <span class="dim">· move of its sign ${lastC}: ${moveText(m.moves.get(lastC))} · ${m.moves.size} signs have moves</span>` : ''}</div>
       <div>top signs (its last ${p.outputWindow} outputs, ${m.outputs.length} so far): ${top || '–'}</div>
-      <h4>seats <span class="dim">(a seat belongs to its sign; a new top-6 sign takes the seat of the one it dethroned; updated after each sleep)</span></h4>
-      <table class="rules">${seatRows}</table>
+      <h4>parts <span class="dim">(1st sign → eyes, 2nd → hat, …; updated at birth and after each sleep; dim = not shown at this level)</span></h4>
+      <table class="rules">${partRows}</table>
       <div class="dim">voice: ${voiceText(voiceFor(m.seats))}</div>
-      ${lastTok ? `<div class="dim">melody of its last sign ${lastTok}: ${melodyText(lastTok)} (${KEY_NAMES[keyOf(lastTok)]} major)</div>` : ''}
+      ${lastC ? `<div class="dim">melody of its last sign ${lastC}: ${melodyText(lastC)} (${KEY_NAMES[keyOf(lastC)]} major)</div>` : ''}
     </section>`);
 
     // ── history ──

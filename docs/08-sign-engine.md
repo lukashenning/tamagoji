@@ -158,16 +158,15 @@ Checks: a 4-sign loop → 4 (4 × 100%); random babbling from 60 signs → 0.1; 
 Shown in the panel (association memory) with the earlier values; stored per measurement, rebuilt from
 the history like everything else. Not used for anything else yet.
 
-## Top 6 → seats → look and voice
+## Top 7 → parts → look and voice
 
 - Its signs are ranked by how often it used them in its **last 1000 outputs** (awake real signs,
   minus taken-back ones; ties → the more recently used).
-- The top 6 hold **seats** (segments: body, eyes, mouth, limbs, crest, accessory). A seat belongs
-  to its sign, not its rank: reordering inside the top 6 changes nothing. When a new sign dethrones
-  one, it takes over that seat → that one segment changes style and colour. A newborn's seats are
-  its seed signs. Recomputed at birth and after each sleep.
-- **Voice**: a blend of the 6 seat signs' synth settings, weighted by their usage, so a new #6
-  shifts it only slightly.
+- The top 7 drive the **parts by rank** (D77): 1st → eyes, 2nd → hat, 3rd → mouth, 4th → legs,
+  5th → arms, 6th → nose, 7th → object. Its level (from complexity) decides how many are shown.
+  Each sign has its own **move** (which variant each part shows when it says that sign). Recomputed
+  at birth and after each sleep. Details: **docs/09-creature-art.md**.
+- **Voice**: a blend of the 7 part signs' synth settings, weighted by their usage.
 
 ## Not in this engine
 

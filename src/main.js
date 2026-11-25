@@ -8,6 +8,7 @@ import { recentEmojis, hourlySet } from './core/keyboard.js';
 import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
+import { buildCreature } from './ui/creature.js';
 import { playMelody, unlockAudio, setSound, soundOn } from './ui/sound.js';
 import { newCreature, loadCreature, saveCreature, loadParams, saveParams, exportFile, importFile } from './ui/store.js';
 
@@ -313,6 +314,7 @@ function render() {
   const m = s.mind;
   const now = s.clock.now();
   el.creature.classList.toggle('asleep', !m.awake);
+  look.render({ seats: m.seats, pose: m.pose, level: m.shownLevel() });
 
   if (!m.awake && m.sleep) {
     el.bubble.className = 'bubble empty';
@@ -472,6 +474,8 @@ document.getElementById('confirm-yes').addEventListener('click', () => {
 confirmBox.addEventListener('click', (e) => e.target === confirmBox && (confirmBox.hidden = true)); // tap outside: keep it
 
 // ── start ──
+const look = buildCreature(el.creature);
+s.styleCount = look.styleCount;
 const palette = buildPalette(document.getElementById('palette'), {
   onPick: playerSend,
 });

@@ -5,11 +5,10 @@
 import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, isElemental } from './tokens.js';
 import { measureComplexity } from './complexity.js';
 import { rngFor, sample, pick, hashString } from './rng.js';
-import { makeCharacter } from './emojiIndex.js';
+import { makeCharacter, ALL } from './emojiIndex.js';
+import { PARTS, DEFAULT_POSE, SLEEP_POSE, SPECIAL_POSE, levelFor, randomMove, mutateMove } from './look.js';
 import { hourlySet } from './keyboard.js';
 import { Assoc, strength } from './assoc.js';
-
-export const SEATS = ['body', 'eyes', 'mouth', 'limbs', 'crest', 'accessory'];
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 
@@ -50,8 +49,12 @@ export class Mind {
     this.greeting = false; // it woke up by itself: its next move is a surprise sign
     this.lastEffect = null; // what the last ✓ / ✗ did (for the panel)
 
-    // top signs → seats (look) and voice
-    this.seats = []; // [{ seat, tok, style, hue, color, uses }]
+    // top signs → parts (look) and voice (D77)
+    this.seats = []; // [{ seat: part name, tok, uses }], in rank order: eyes, hat, mouth, legs, arms, nose, object
+    this.moves = new Map(); // sign -> its move (7 digits 1–6)
+    this.pose = DEFAULT_POSE.slice(); // the variants shown now
+    this.awaiting = null; // its last real sign, waiting for your answer (which changes that sign's move)
+    this.level = 1; // from complexity
 
     this.stats = { yes: 0, no: 0, takenBack: 0, dreamLearned: 0 };
 
@@ -76,6 +79,7 @@ export class Mind {
     if (tok === SLEEP) return this.awake && this.fallAsleep(e.t);
     if (tok === WAKE) return !this.awake && this.wakeUp(e.t, e.m !== 'manual');
     if (e.who === 'P') {
+      this.answerMove(tok);
       if (isElemental(tok)) this.playerSpecial(tok, e.t);
       else this.playerSign(tok, e.t);
     } else if (isElemental(tok)) this.creatureSpecial(tok);
@@ -168,7 +172,17 @@ export class Mind {
   }
 
   /** You sent ✅ ❌ or ❓ (☐: "your turn"). */
+  /** Your answer to its last real sign changes that sign's move: ✓ keeps it, ✗ re-rolls it, anything else changes one digit. */
+  answerMove(tok) {
+    const sign = this.awaiting;
+    this.awaiting = null;
+    if (!sign || tok === YES) return;
+    const rng = rngFor(this.seed, 'move', this.h);
+    this.moves.set(sign, tok === NO ? randomMove(rng) : mutateMove(this.moves.get(sign), rng));
+  }
+
   playerSpecial(tok, t) {
+    this.pose = SPECIAL_POSE[tok].slice(); // your ✓ ✗ ❓ show their fixed pose
     const p = this.p;
     if (tok === ASK) {
       this.waitStreak = this.lastPlayer === ASK ? this.waitStreak + 1 : 1;
@@ -211,6 +225,10 @@ export class Mind {
   /** Its real sign. Not learned by itself; only ✓ / ✗ (and dreams) teach it its own moves. */
   creatureSign(tok) {
     this.greeting = false;
+    // its move for this sign (random the first time it says it); shown until its next sign
+    if (!this.moves.has(tok)) this.moves.set(tok, randomMove(rngFor(this.seed, 'move', this.h)));
+    this.pose = this.moves.get(tok).slice();
+    this.awaiting = tok;
     const entry = this.push(tok, 'C');
     this.outputs.push({ tok, h: entry.h });
     if (this.rejected.length) this.armed = true;
@@ -222,6 +240,8 @@ export class Mind {
   creatureSpecial(tok) {
     this.greeting = false;
     this.reaction = null;
+    this.pose = SPECIAL_POSE[tok].slice();
+    this.awaiting = null;
     if (tok === YES || tok === NO) {
       const r = this.applyToLast(tok === YES ? this.p.yesWeight : -this.p.noWeight);
       if (r) this.reaction = r;
@@ -358,6 +378,8 @@ export class Mind {
   // ───────────────────────── sleep ─────────────────────────
 
   fallAsleep(t) {
+    this.pose = SLEEP_POSE.slice(); // eyes closed, everything else default
+    this.awaiting = null;
     // energy recovers steadily: empty → full in fullRecoveryMin
     const energyAtStart = Math.max(0, this.energy);
     const missing = Math.max(this.capacity * 0.05, this.capacity - energyAtStart);
@@ -447,6 +469,7 @@ export class Mind {
         const c = measureComplexity(s.dream.slice(n - this.p.complexityDreamMin, n), this.p.complexityMinUses);
         this.complexity = { ...c, t };
         this.complexityLog.push(this.complexity);
+        this.level = levelFor(c.value, this.p.levelAt); // it grows or shrinks to its level
         if (this.complexityLog.length > 100) this.complexityLog.shift();
       }
       this.stats.dreamLearned = n;
@@ -455,6 +478,7 @@ export class Mind {
     }
     this.sleep = null;
     this.awake = true;
+    this.pose = DEFAULT_POSE.slice();
     // woken by you: it waits for your sign; woke up by itself: it says a surprise sign first
     this.turn = byItself ? 'C' : 'P';
     this.greeting = byItself;
@@ -472,34 +496,24 @@ export class Mind {
   }
 
   /**
-   * The top signs hold seats (segments). A seat belongs to its sign, not its rank: when a new sign
-   * enters the top, it takes the seat of the one it dethroned (the least used one that dropped out).
-   * Seats without a top sign keep their seed sign.
+   * The top signs drive the parts by rank (D77): the most used sign the eyes, the 2nd the hat, … the
+   * 7th the object. Updated at birth and after each sleep. With fewer than 7 top signs, its seed signs
+   * (and then fixed fillers) fill up.
    */
   updateSeats() {
-    const p = this.p;
     const ranked = this.topSigns();
     const uses = new Map(ranked.map((r) => [r.tok, r.uses]));
-    const top = ranked.slice(0, p.seats).map((r) => r.tok);
-    if (!this.seats.length) {
-      const first = [...top, ...this.character.filter((c) => !top.includes(c))].slice(0, p.seats);
-      this.seats = first.map((tok, i) => this.makeSeat(i, tok));
+    const toks = ranked.slice(0, PARTS.length).map((r) => r.tok);
+    for (const c of this.character) if (toks.length < PARTS.length && !toks.includes(c)) toks.push(c);
+    for (let k = 0; toks.length < PARTS.length; k++) {
+      const c = ALL[hashString(`filler:${k}`, this.seed) % ALL.length];
+      if (!toks.includes(c)) toks.push(c);
     }
-    const holders = this.seats.map((s) => s.tok);
-    const entrants = top.filter((t) => !holders.includes(t));
-    const free = this.seats
-      .map((s, i) => [i, s.tok])
-      .filter(([, tok]) => !top.includes(tok))
-      .sort((a, b) => (uses.get(a[1]) || 0) - (uses.get(b[1]) || 0))
-      .map(([i]) => i);
-    entrants.forEach((tok, j) => {
-      if (j < free.length) this.seats[free[j]] = this.makeSeat(free[j], tok);
-    });
-    for (const s of this.seats) s.uses = uses.get(s.tok) || 0;
+    this.seats = toks.map((tok, i) => ({ seat: PARTS[i], tok, uses: uses.get(tok) || 0 }));
   }
 
-  makeSeat(i, tok) {
-    const hue = hashString('hue:' + tok) % 360;
-    return { seat: SEATS[i], tok, style: hashString(`style:${SEATS[i]}:${tok}`) % 8, hue, color: `hsl(${hue} 60% 80%)`, uses: 0 };
+  /** The level shown: set by the lab panel (levelOverride 1–6) or from complexity. */
+  shownLevel() {
+    return this.p.levelOverride || this.level;
   }
 }

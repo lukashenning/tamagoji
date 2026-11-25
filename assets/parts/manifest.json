@@ -1,0 +1,30 @@
+{
+ "frame": [
+  48,
+  48
+ ],
+ "parts": {
+  "eyes": {
+   "styles": []
+  },
+  "hat": {
+   "styles": []
+  },
+  "mouth": {
+   "styles": []
+  },
+  "legs": {
+   "styles": []
+  },
+  "arms": {
+   "styles": []
+  },
+  "nose": {
+   "styles": []
+  },
+  "object": {
+   "styles": []
+  }
+ },
+ "version": 1
+}

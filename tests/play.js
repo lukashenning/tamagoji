@@ -99,7 +99,7 @@ function play(seed, steps) {
     if (m.seq.some((x) => isElemental(x.tok))) flag('special signs are never in the sequence', '');
     if (m.seq.some((x) => m.takenBack.has(x.h))) flag('taken-back signs are not in the sequence', '');
     if (m.energy > m.capacity + 1e-9) flag('energy within capacity', m.energy);
-    if (new Set(m.seats.map((x) => x.tok)).size !== m.seats.length || m.seats.length !== P.seats) flag('6 distinct seats', m.seats.map((x) => x.tok).join(''));
+    if (new Set(m.seats.map((x) => x.tok)).size !== m.seats.length || m.seats.length !== P.seats) flag('7 distinct parts', m.seats.map((x) => x.tok).join(''));
   }
   // count its reactions against their opportunities
   for (let i = 1; i < history.length; i++) {
@@ -130,7 +130,7 @@ const rules = [
   'special signs are never in the sequence',
   'taken-back signs are not in the sequence',
   'energy within capacity',
-  '6 distinct seats',
+  '7 distinct parts',
   'dreams contain only real signs',
   'waking up by itself it greets you',
   'replay rebuilds the same mind',

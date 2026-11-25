@@ -13,7 +13,10 @@ from the user's sketch: associations on levels 1–4 (votes, longer contexts cou
 "not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure, surprise (10% base + repetition +
 waiting), ☐ chaining, slow fading, dreams (+0.1, plus proximity links the other way round at +0.04,
 D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice. Complexity =
-known signs × order, measured after dreams of ≥ 700 signs (D75, panel only). UI: tap creature ✓,
+known signs × order, measured after dreams of ≥ 700 signs (D75). **Creature graphic** (D77,
+`docs/09-creature-art.md`): no body, up to 7 stacked parts from its top 7 signs by rank, level 1–6
+from complexity, per-sign moves, fixed poses; placeholders until the user's art arrives through
+`art/parts/` → `scripts/build_parts.py` → `assets/parts/`. UI: tap creature ✓,
 tap around ❓, swipe through ✗, soft flashes, exchange row bottom left; phones/tablets game-only,
 Escape toggles game-only on desktop (D71). Browser storage `tamagoji.creature.exp1` (kept so the
 user's creature survives). Rule checks over simulated play: `jsc -m tests/play.js` (40 creatures ×
@@ -81,6 +84,7 @@ back without being asked. Prefer tuning existing parameters.
 | `docs/03-open-questions.md` | Q&A tracker |
 | `docs/04-decisions.md` | Decisions log |
 | `docs/08-sign-engine.md` | **Current design** (v1.0): the sign engine (replaces 07) |
+| `docs/09-creature-art.md` | Creature graphic: parts, levels, moves, art format and workflow |
 | `docs/07-simple-core.md` | Design of 0.6–0.13: the simple core (superseded by 08) |
 | `docs/05-system-design.md` | Design of v0.1–0.5 (mostly superseded by 07) |
 | `docs/06-proposals-v6.md` | v0.5 changes after the first broad test (superseded by 07) |

@@ -276,7 +276,7 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
   check('woken by you it waits; awake by itself it greets with a surprise', manual === 'P' && m.turn === 'C' && d.m === 'surprise' && hourlySet(m.seed, t.v).includes(d.tok), `woken by you: ${manual === 'P' ? 'your turn' : 'its turn'} · by itself: ${d.tok} (${d.why.mode})`);
 }
 
-// 12. seats: a newborn's seats are its seed; a new top-6 sign takes the seat of the one it dethroned
+// 12. parts by rank (D77): the most used sign drives the eyes, the 2nd the hat, … (updated after sleep)
 {
   const { m, o, t } = fresh(12);
   const seed = m.seats.map((s) => s.tok).join('');
@@ -292,25 +292,44 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
     t.v += 61 * MIN;
     o('S', WAKE);
   };
-  ['🍎', '🍐', '🍋', '🍇', '🍓', '🍒'].forEach((x, i) => say(x, 20 - i));
+  ['🍎', '🍐', '🍋', '🍇', '🍓', '🍒', '🍑'].forEach((x, i) => say(x, 20 - i));
   sleepWake();
   const s1 = m.seats.map((s) => s.tok);
-  say('🍒', 10); // reorder inside the top 6
+  say('🍑', 20); // 🍑 becomes the most used
   sleepWake();
   const s2 = m.seats.map((s) => s.tok);
-  say('🥝', 18); // a newcomer dethrones the least used (🍓)
-  sleepWake();
-  const s3 = m.seats.map((s) => s.tok);
-  const changed = s3.filter((x, i) => x !== s2[i]);
-  const ok = s1.length === 6 && [...s1].sort().join('') === [...'🍎🍐🍋🍇🍓🍒'.match(/./gu)].sort().join('') && s2.join('') === s1.join('') && changed.length === 1 && changed[0] === '🥝' && !s3.includes('🍓');
-  check('seats: seed first; reordering changes nothing; a newcomer takes one seat', ok, `seed ${seed} → ${s1.join('')} → ${s2.join('')} → ${s3.join('')}`);
+  const ok = s1.join('') === '🍎🍐🍋🍇🍓🍒🍑' && s2[0] === '🍑' && m.seats[0].seat === 'eyes' && m.seats[6].seat === 'object' && seed.length > 0 && m.seats.length === 7;
+  check('parts follow the rank of its top 7 signs', ok, `seed ${seed} → ${s1.join('')} → ${s2.join('')}`);
 
-  // voice: a new #6 shifts it a little; a completely different top 6 shifts it a lot
+  // voice: the same signs in another order shift it a little; completely different signs a lot
   const dist = (a, b) => Object.keys(a).reduce((s, k) => s + Math.abs(a[k] - b[k]), 0);
-  const v2 = voiceFor(m.seats.map((x, i) => ({ ...x, tok: s2[i], uses: x.uses })));
+  const v2 = voiceFor(m.seats.map((x, i) => ({ ...x, tok: s1[i], uses: x.uses })));
   const v3 = voiceFor(m.seats);
-  const other = voiceFor(m.seats.map((x, i) => ({ ...x, tok: ['🚗', '🚲', '🚌', '🛴', '🚦', '🚀'][i] })));
-  check('voice: a new #6 shifts it a little, a new top 6 a lot', dist(v2, v3) < dist(v3, other) / 2, `new #6: ${dist(v2, v3).toFixed(2)} · all new: ${dist(v3, other).toFixed(2)} · now ${voiceText(v3)}`);
+  const other = voiceFor(m.seats.map((x, i) => ({ ...x, tok: ['🚗', '🚲', '🚌', '🛴', '🚦', '🚀', '🛸'][i] })));
+  check('voice: a reordered top 7 shifts it a little, a new top 7 a lot', dist(v2, v3) < dist(v3, other) / 2, `new #6: ${dist(v2, v3).toFixed(2)} · all new: ${dist(v3, other).toFixed(2)} · now ${voiceText(v3)}`);
+}
+
+// 12b. moves and poses (D77)
+{
+  const { m, o } = fresh(21);
+  o('P', '🐶');
+  o('C', '🎾');
+  const first = m.moves.get('🎾').join('');
+  const okShown = m.pose.join('') === first;
+  o('P', '🦴'); // not ✓ / ✗: one digit changes, the pose stays until its next sign
+  const after = m.moves.get('🎾').join('');
+  const oneDigit = [...after].filter((d, i) => d !== first[i]).length === 1 && m.pose.join('') === first;
+  o('C', '🎾');
+  o('P', YES); // ✓ keeps the move; your ✓ shows the ✓ mouth
+  const kept = m.moves.get('🎾').join('') === after && m.pose.join('') === '1121111';
+  o('C', '🎾');
+  o('P', NO); // ✗ re-rolls it; your ✗ shows the ✗ mouth
+  const rerolled = m.pose.join('') === '1131111';
+  o('C', ASK); // its ❓: the ? arms
+  const ask = m.pose.join('') === '1111211';
+  o('S', SLEEP);
+  const sleeping = m.pose.join('') === '2111111';
+  check('moves: shown with its sign; ✓ keeps, ✗ re-rolls, else one digit changes; fixed poses', okShown && oneDigit && kept && rerolled && ask && sleeping, `🎾 ${first} → ${after} · ✗ → ${m.moves.get('🎾').join('')}`);
 }
 
 // 13. newborns sound different

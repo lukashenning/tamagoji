@@ -52,11 +52,13 @@ export const DEFAULT_PARAMS = {
   replyDelaySec: [0.6, 1.5],
 
   // seed: random emojis it is born with (its first seats)
-  characterSize: 6,
+  characterSize: 7,
 
   // top signs → seats (look) and voice
   outputWindow: 1000, // ranked by use in its last this many outputs
-  seats: 6,
+  seats: 7, // one per part: eyes, hat, mouth, legs, arms, nose, object (D77)
+  levelAt: [3, 6, 10, 15, 21], // complexity needed for levels 2…6 (rough: ~2 days of play to level 6)
+  levelOverride: 0, // lab panel: show this level (1–6) instead of the one from complexity; 0 = off
 
 
   // storage
