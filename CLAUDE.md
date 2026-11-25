@@ -94,5 +94,6 @@ back without being asked. Prefer tuning existing parameters.
 ## Stack (D32)
 
 Plain JavaScript ES modules, no build step · vanilla DOM · hand-written tiny neural net · tests on
-JavaScriptCore. TypeScript + Vite + PWA service worker later, once Node is available.
+JavaScriptCore. A small service worker (`sw.js`) always loads the newest files (network first,
+offline fallback). TypeScript + Vite later, once Node is available.
 Manual testing via the test panel; headless bot players maybe later (D25).
