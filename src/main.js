@@ -97,13 +97,16 @@ function playerSend(tok) {
 // tap the creature (from its hat down to its legs, its middle) = ✓ · tap anywhere else = ❓ · swipe sideways anywhere = ✗
 function gestures(stage, creature) {
   let g = null;
-  // the creature: the middle of its frame, from the top of its hat down to just above its legs (arms
-  // and object don't count)
-  const CENTRE = { left: 0.3, right: 0.7, top: 0.04, bottom: 0.66 }; // shares of the creature's frame
+  // the creature: the middle of its frame from the top of its hat down to just above its legs, plus
+  // the wider band where its eyes are (arms, legs and object don't count). Shares of its frame.
+  const BODY = [
+    { left: 0.3, right: 0.7, top: 0.04, bottom: 0.66 }, // hat, face, middle
+    { left: 0.15, right: 0.85, top: 0.2, bottom: 0.46 }, // its eyes, out to the sides
+  ];
   const inside = (r, x, y) => {
     const fx = (x - r.left) / r.width;
     const fy = (y - r.top) / r.height;
-    return fx >= CENTRE.left && fx <= CENTRE.right && fy >= CENTRE.top && fy <= CENTRE.bottom;
+    return BODY.some((b) => fx >= b.left && fx <= b.right && fy >= b.top && fy <= b.bottom);
   };
   stage.addEventListener('pointerdown', (e) => {
     if (e.button > 0) return;

@@ -100,3 +100,4 @@
 | D93 | 2026-11-26 | ✓ by tapping only the creature's centre (between hat and legs); the rest of the stage is ❓. Sleep clouds float right to left across the stage (behind and in front of the creature), 6 at full energy up to 34 when empty. | accepted | user |
 | D94 | 2026-11-26 | Tapping the hat also counts as tapping the creature (✓ area from 4% to 66% down its frame). Sleep clouds use the stage's whole height. | accepted | user |
 | D95 | 2026-11-26 | Sleep clouds mostly in the lower part of the stage (denser towards the bottom), never as high as the logo (revises D94's whole height). | accepted | user |
+| D96 | 2026-11-26 | Tapping its eyes also counts as tapping the creature (an extra band 15–85% across, 20–46% down its frame). | accepted | user |

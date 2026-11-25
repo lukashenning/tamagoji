@@ -144,7 +144,7 @@ plus its newest try, until you send something other than ✗ (the "not that, thi
 
 ✓ ✗ ❓ are not on the keyboard (both halves are 16 emojis); you give them only with gestures.
 On the stage: **tap the creature = ✓** (from its hat down to just above its legs: the middle 40% across, 4–66%
-down its frame; arms and object don't count), **tap anywhere else = ❓**, **swipe sideways anywhere on the stage = ✗**.
+down its frame, plus its eyes: 15–85% across, 20–46% down; arms, legs and object don't count), **tap anywhere else = ❓**, **swipe sideways anywhere on the stage = ✗**.
 On phones the app stays put (no dragging, rubber-banding or pull-to-refresh).
 Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,
 soft, hollow sound of your own (`PLAYER_VOICE`).
