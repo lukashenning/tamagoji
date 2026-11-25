@@ -62,13 +62,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 14px;
   touch-action: none; /* all swipes reach the game (✗ = swipe sideways), nothing scrolls */
   cursor: pointer;
+  z-index: 0; /* its own layering: clouds behind and in front of the creature */
 }
 /* while it sleeps: mute / unmute the dream melodies (top right, below the logo) */
 .dream-mute {
   position: absolute;
   top: 4px;
   right: 14px;
-  z-index: 2;
+  z-index: 5; /* above the clouds */
   width: 36px;
   height: 36px;
   padding: 7px;
@@ -351,15 +352,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .confirm-buttons .danger { background: #f7c8d0; border-color: #eeb0bc; font-weight: 600; }
 
-/* sleeping: clouds drift below it, more the more tired it is (moved by main.js) */
-.clouds { position: absolute; left: 50%; top: calc(100% - 6px); /* from just below it down over the lower area */ width: 0; height: 0; pointer-events: none; }
+/* sleeping: clouds float across the stage from right to left (moved by main.js); the back layer is
+   behind the creature, the front layer in front of it */
+.cloud-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.cloud-layer.back { z-index: -1; }
+.cloud-layer.front { z-index: 3; }
 .cloud {
   position: absolute;
-  left: -0.6em;
+  left: 0;
   top: 0;
   font-family: var(--emoji);
   line-height: 1;
-  opacity: 0;
-  transition: opacity 2.4s ease;
-  will-change: transform, opacity;
+  will-change: transform;
 }
