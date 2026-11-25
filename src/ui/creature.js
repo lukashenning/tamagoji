@@ -9,7 +9,7 @@
 // Every part is its own layer (.part.part-<name>) with its own transform origin, ready for subtle
 // "breathing" animations later. The object sits to the right of the creature, outside its layout.
 
-import { PARTS, VARIANTS, lookOf, partsShown } from '../core/look.js';
+import { PARTS, VARIANTS, lookOf, partsShown, inkColor } from '../core/look.js';
 
 // back to front (the object is drawn separately, to the right)
 const LAYERS = ['legs', 'arms', 'eyes', 'nose', 'mouth', 'hat'];
@@ -83,7 +83,8 @@ export function buildCreature(root) {
       const visible = i < shown && !!seat;
       l.wrap.hidden = !visible;
       if (!visible) return;
-      const { style, color } = lookOf(seat.tok, styleCount(part));
+      const { style, color: gbc } = lookOf(seat.tok, styleCount(part));
+      const color = inkColor(gbc); // too light colours are darkened for the thin lines
       const variant = hasVariant(part, style, pose[i]) ? pose[i] : 1;
       const key = `${!!art}|${seat.tok}|${style}|${color}|${variant}`;
       if (key === l.key) return;

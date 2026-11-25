@@ -6,7 +6,7 @@ import { SLEEP, WAKE, BIRTH } from '../core/tokens.js';
 import { melodyText, keyOf, KEY_NAMES } from '../core/melody.js';
 import { voiceFor, voiceText } from '../core/voice.js';
 import { soundOn } from './sound.js';
-import { PART_EMOJI, lookOf, partsShown, levelFor, moveText } from '../core/look.js';
+import { PART_EMOJI, lookOf, partsShown, levelFor, moveText, inkColor } from '../core/look.js';
 
 const pct = (x) => (x * 100).toFixed(0) + '%';
 const num = (x, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : '–');
@@ -202,7 +202,7 @@ export function buildPanel(root, h) {
       .map((x, i) => {
         const l = lookOf(x.tok, styles(x.seat));
         const off = i >= shown ? ' class="dim"' : '';
-        return `<tr${off}><td>${i + 1}. ${PART_EMOJI[i]} ${x.seat}</td><td>${x.tok} · style ${l.style + 1}/${styles(x.seat)} · <span class="swatch" style="background:${l.color}"></span> gbc1 #${l.colorIndex + 1} · used ${x.uses}× · variant ${m.pose[i]}${i >= shown ? ' · from level ' + i : ''}</td></tr>`;
+        return `<tr${off}><td>${i + 1}. ${PART_EMOJI[i]} ${x.seat}</td><td>${x.tok} · style ${l.style + 1}/${styles(x.seat)} · <span class="swatch" style="background:${l.color}"></span> gbc1 #${l.colorIndex + 1}${inkColor(l.color) !== l.color ? ` <span class="dim">(drawn darker</span> <span class="swatch" style="background:${inkColor(l.color)}"></span><span class="dim">)</span>` : ''} · used ${x.uses}× · variant ${m.pose[i]}${i >= shown ? ' · from level ' + i : ''}</td></tr>`;
       })
       .join('');
     const lastC = (() => {

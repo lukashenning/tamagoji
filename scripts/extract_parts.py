@@ -29,7 +29,8 @@ ART = os.path.join(ROOT, 'art', 'parts')
 SHEETS = os.path.join(ROOT, 'art', 'sheets')
 FRAME_FILE = os.path.join(ART, 'frame.json')
 PARTS = ['eyes', 'hat', 'mouth', 'legs', 'arms', 'nose', 'object']
-LONG_SIDE = 192  # frame size in pixels along its longer side (set once, kept in art/parts/frame.json)
+LONG_SIDE = 320  # frame size in pixels along its longer side (set once, kept in art/parts/frame.json);
+# about 1.5 × the boxes on a ~2000 px sheet, so the creature stays sharp when shown large
 BLOCK = 4  # px per cell when looking for the boxes
 
 
@@ -42,8 +43,9 @@ def ink(r, g, b):
     if b < r + 10 or is_red(r, g, b):
         return 0.0
     lum = 0.299 * r + 0.587 * g + 0.114 * b
-    a = (155 - lum) / 100
-    return 0.0 if a < 0.12 else min(1.0, a)
+    # a soft ramp (smooth edges): full ink below 70, nothing above 160 (the grid lines are ~180)
+    t = min(1.0, max(0.0, (160 - lum) / 90))
+    return t * t * (3 - 2 * t)
 
 
 def find_boxes(w, h, rows):
@@ -157,19 +159,32 @@ def inside(rows, s):
 
 
 def cut(rows, box, fw, fh):
-    """The drawing inside a box, scaled to the frame: rows of alpha 0…255 (area average)."""
+    """The drawing inside a box, scaled to the frame: rows of alpha 0…255. Enlarging: smooth
+    (bilinear) interpolation; shrinking: area average."""
     L, T, R, B = box
     sw, sh = R - L, B - T
     src = [[ink(*rows[y][x * 4:x * 4 + 3]) if rows[y][x * 4 + 3] > 0 else 0.0 for x in range(L, R)] for y in range(T, B)]
     out = []
+    if sw > 1.2 * fw:
+        for ty in range(fh):
+            ya, yb = int(ty * sh / fh), max(int(ty * sh / fh) + 1, int((ty + 1) * sh / fh))
+            line = []
+            for tx in range(fw):
+                xa, xb = int(tx * sw / fw), max(int(tx * sw / fw) + 1, int((tx + 1) * sw / fw))
+                total = sum(src[y][x] for y in range(ya, yb) for x in range(xa, xb))
+                line.append(round(255 * total / ((yb - ya) * (xb - xa))))
+            out.append(line)
+        return out
     for ty in range(fh):
-        ya, yb = int(ty * sh / fh), max(int(ty * sh / fh) + 1, int((ty + 1) * sh / fh))
+        sy = min(sh - 1.001, max(0.0, (ty + 0.5) * sh / fh - 0.5))
+        y0, fy = int(sy), sy - int(sy)
+        r0, r1 = src[y0], src[y0 + 1]
         line = []
         for tx in range(fw):
-            xa, xb = int(tx * sw / fw), max(int(tx * sw / fw) + 1, int((tx + 1) * sw / fw))
-            total = sum(src[y][x] for y in range(ya, yb) for x in range(xa, xb))
-            # thin lines stay visible when scaled down: boost a little, cap at 1
-            line.append(min(255, round(255 * min(1.0, 1.6 * total / ((yb - ya) * (xb - xa))))))
+            sx = min(sw - 1.001, max(0.0, (tx + 0.5) * sw / fw - 0.5))
+            x0, fx = int(sx), sx - int(sx)
+            a = (r0[x0] * (1 - fx) + r0[x0 + 1] * fx) * (1 - fy) + (r1[x0] * (1 - fx) + r1[x0 + 1] * fx) * fy
+            line.append(round(255 * a))
         out.append(line)
     return out
 
@@ -251,6 +266,8 @@ def main():
             if alpha:
                 write_mask(os.path.join(folder, style, f'{v}.png'), fw, fh, alpha)
         print(f'  {part}/{style}: variants {", ".join(str(v) for v, x in enumerate(variants, 1) if x)}')
+    if os.path.abspath(a.sheet).startswith(SHEETS + os.sep):
+        return  # re-extracting a kept sheet: it's already there
     os.makedirs(SHEETS, exist_ok=True)
     n = sum(f.startswith(parts[0] + '-') for f in os.listdir(SHEETS)) + 1
     keep = os.path.join(SHEETS, f'{parts[0]}-{n}{os.path.splitext(a.sheet)[1]}')  # e.g. eyes-1.webp, eyes-2.png

@@ -67,3 +67,33 @@ export function mutateMove(move, rng) {
 }
 
 export const moveText = (move) => move.join('');
+
+// ── colours for line art ──
+// Thin monochrome lines in very light gbc1 colours (cream, off-white, pale blue …) would hardly show
+// on the light background, so the parts are drawn in a darker shade of such colours: the colour scaled
+// towards black (same hue and tone, like the colour in shadow) until its contrast with the background
+// is at least INK_CONTRAST.
+const BACKGROUND = '#f8f8f8';
+const INK_CONTRAST = 2.5;
+
+const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+const luminance = ([r, g, b]) => {
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+};
+const hexOf = (rgb) => '#' + rgb.map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
+
+/** The colour a part is drawn in: its gbc1 colour, darkened if it is too light for thin lines. */
+export function inkColor(hex) {
+  const maxL = (luminance(rgbOf(BACKGROUND)) + 0.05) / INK_CONTRAST - 0.05;
+  const rgb = rgbOf(hex);
+  if (luminance(rgb) <= maxL) return hex;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 20; i++) {
+    const k = (lo + hi) / 2;
+    if (luminance(rgb.map((c) => c * k)) <= maxL) lo = k;
+    else hi = k;
+  }
+  return hexOf(rgb.map((c) => c * lo));
+}

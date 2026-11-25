@@ -72,12 +72,17 @@ is position 3, so ✓ is 1121111.)
 - **Dark blue** inside a box is the drawing. Its place inside the box is its place on the creature:
   all parts share the box as their frame and are stacked, back to front: legs, arms, eyes, nose,
   mouth, hat. The **object** is drawn the same way (filling its box is fine); in the game it is shown
-  at 75% size to the creature's right (its frame starts at 80% of the creature's frame width), so it
-  fits on a phone.
+  at half size to the creature's right (its frame starts at 74% of the creature's frame width), so it
+  fits on a phone. The creature is shown 252 px wide.
 - An **empty box** (no dark blue) = that variant doesn't exist → the game shows variant 1 instead.
   If variant 1 is empty, the row is skipped.
 - Fixed variants (see above): eyes 2 closed, mouth 2 ✓, mouth 3 ✗, arms 2 ?.
-- In the game every drawing becomes **one colour**: the sign's gbc1 colour.
+- In the game every drawing becomes **one colour**: the sign's gbc1 colour. Colours too light for thin
+  lines on the light background (30 of the 64) are drawn darker: scaled towards black until their
+  contrast with the background is at least 2.5 : 1 (same hue, like the colour in shadow; cream → tan).
+- **Detail** is limited by the sheet: on a ~2000 px wide sheet a box is ~210–220 px. Sheets saved
+  straight into the project folder (e.g. `art/incoming/`) at full resolution keep more detail than
+  images pasted into the chat, which may arrive scaled down.
 
 ## Workflow (what happens when you send a sheet)
 
@@ -87,7 +92,8 @@ is position 3, so ✓ is 1121111.)
    - finds the red boxes (hand-drawn lines are fine: each side is taken where its line mostly runs,
      overshoots and slight slants don't matter), groups them into rows, left to right;
    - takes the dark blue inside each box (grid lines, paper, red and grey writing are dropped),
-     scales it to the **frame** (192 px on the longer side, the shape of the boxes; fixed by the
+     scales it to the **frame** (320 px on the longer side, the shape of the boxes; soft edges,
+     smooth enlarging; fixed by the
      first sheet in `art/parts/frame.json`, later sheets are scaled to the same frame). A box side is a
      long red line across the whole box, so labels next to boxes are never mistaken for sides; all
      boxes on a sheet are assumed to be the same size;
