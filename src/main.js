@@ -9,7 +9,7 @@ import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
 import { buildCreature } from './ui/creature.js';
-import { playMelody, playDreamMelody, dreamSoundOn, setDreamSound, unlockAudio, setSound, soundOn } from './ui/sound.js';
+import { playMelody, playDreamMelody, dreamSoundOn, setDreamSound, setDreaming, unlockAudio, setSound, soundOn } from './ui/sound.js';
 import { newCreature, loadCreature, saveCreature, loadParams, saveParams, exportFile, importFile } from './ui/store.js';
 
 // ── clock (with fast-forward for testing) ──
@@ -312,6 +312,7 @@ function render() {
   }
 
   muteBtn.hidden = m.awake; // the dream mute button only while it sleeps
+  setDreaming(!m.awake); // waking cuts the dream sounds off at once; falling asleep opens them (unless muted)
 
   // keyboard: most recent emojis | the hour's random set (✅ ❌ ❓ are gestures, not keys).
   // It slides away while it sleeps and slides back when it wakes.

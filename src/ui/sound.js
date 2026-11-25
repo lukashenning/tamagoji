@@ -176,13 +176,28 @@ let dreamOn = (() => {
 export const dreamSoundOn = () => dreamOn;
 
 let dreamOut = null; // the dream sounds' own channel: everything of the dreams (notes and reverb) runs through it
-/** Mute / unmute the dream channel: cuts off at once (a 10 ms fade, no click), ringing notes and reverb too. */
+let dreaming = false;
+const channelOpen = () => dreaming && dreamOn; // open only while it sleeps and you haven't muted the dreams
+
+/** Open or cut off the dream channel at once (a 10 ms fade, no click), ringing notes and reverb too. */
+function updateChannel() {
+  if (dreamOut) dreamOut.gain.setTargetAtTime(channelOpen() ? 1 : 0, dreamOut.context.currentTime, 0.01);
+}
+
+/** Your mute / unmute choice (remembered on this device; it also holds for the next sleeps). */
 export function setDreamSound(on) {
   dreamOn = on;
   try {
     localStorage.setItem(DREAM_KEY, on ? 'on' : 'off');
   } catch {}
-  if (dreamOut) dreamOut.gain.setTargetAtTime(on ? 1 : 0, dreamOut.context.currentTime, 0.01);
+  updateChannel();
+}
+
+/** It fell asleep (true) or woke up (false): waking cuts the dream channel off, falling asleep opens it (unless muted). */
+export function setDreaming(asleep) {
+  if (asleep === dreaming) return;
+  dreaming = asleep;
+  updateChannel();
 }
 
 let bus = null;
@@ -210,7 +225,7 @@ function reverbBus(ac) {
   const dry = ac.createGain();
   dry.gain.value = 0.7;
   dreamOut = ac.createGain();
-  dreamOut.gain.value = dreamOn ? 1 : 0;
+  dreamOut.gain.value = channelOpen() ? 1 : 0;
   dreamOut.connect(ac.destination);
   bus = ac.createGain();
   bus.connect(dry).connect(dreamOut);
@@ -220,6 +235,6 @@ function reverbBus(ac) {
 
 /** A dream sign's melody: very quiet glockenspiel in a roomy space, stretched to last `durationMs`. */
 export function playDreamMelody(tok, durationMs) {
-  if (!dreamOn) return;
+  if (!channelOpen()) return;
   playMelody(tok, GLOCK_VOICE, 0.1, 0, { durationMs, reverb: true });
 }
