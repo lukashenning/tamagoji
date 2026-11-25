@@ -1,13 +1,13 @@
 // What the keyboard shows (shared by the app and the simulator).
-// Left: "Zuletzt" = the most recently used emojis (yours and the creature's), newest first, no duplicates,
-// after the pinned signs ✅ ❌ ❓. Right: a random set that changes every full hour ("16 Uhr").
+// Left: "Zuletzt" = the most recently used emojis (yours and the creature's), newest first, no duplicates.
+// ✅ ❌ ❓ are not on the keyboard: you give them with gestures on the stage. Right: a random set that changes every full hour ("16 Uhr").
 
 import { ALL } from './emojiIndex.js';
 import { rngFor } from './rng.js';
-import { ELEMENTALS, isContent } from './tokens.js';
+import { isContent } from './tokens.js';
 
 export const KEYS_PER_HALF = 16; // a 4 × 4 grid per half
-export const RECENT_SLOTS = KEYS_PER_HALF - ELEMENTALS.length;
+export const RECENT_SLOTS = KEYS_PER_HALF;
 const HOUR = 3600000;
 
 /** Most recently used ordinary emojis (both speakers), newest first, without duplicates. */

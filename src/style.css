@@ -1,6 +1,6 @@
 :root {
   --bg: #f4f1ec;
-  --phone: #fbf7f2;
+  --phone: #f8f8f8;
   --ink: #3b3a40;
   --dim: #9a96a0;
   --line: #e6e0d8;
@@ -119,7 +119,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   will-change: transform, opacity;
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
-/* bottom left, growing to the right: the current exchange (your signs, its signs dimmer) since your last ✓ ✗ ❓ */
+/* bottom left, growing to the right: the current exchange (your signs, its signs dimmer) since your last ✓ or ✗ */
 .you {
   position: absolute;
   left: 22px;
@@ -139,8 +139,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px 18px;
-  background: #f1ece6;
-  border-top: 1px solid var(--line);
+  background: #f0f0f0;
+  border-top: 1px solid #e6e6e6;
 }
 .palette.locked .em { opacity: 0.45; pointer-events: none; }
 .kb-title {
@@ -166,9 +166,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: 10px;
   cursor: pointer;
   -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
   transition: opacity 0.2s;
 }
-.em:hover { background: rgba(0, 0, 0, 0.06); }
+/* hover only with a mouse: on touch screens a hover would stick to the tapped key like a frame */
+@media (hover: hover) {
+  .em:hover { background: rgba(0, 0, 0, 0.06); }
+}
 .em.zz { cursor: default; opacity: 0.5; }
 .em.zz[data-zz] { cursor: pointer; }
 .em.zz:not([data-zz]):hover { background: none; }

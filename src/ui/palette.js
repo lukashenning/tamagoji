@@ -1,5 +1,5 @@
 // Input panel: two 4×4 grids.
-// Left ("Zuletzt"): the pinned signs ✅ ❌ ❓ + the most recently used emojis (yours and its).
+// Left ("Zuletzt"): the most recently used emojis (yours and its). ✅ ❌ ❓ are gestures, not keys.
 // Right ("16 Uhr"): 16 random emojis that change every full hour.
 
 const cells = (list) => list.map((e) => `<span class="em${e.pinned ? ' pinned' : ''}" data-e="${e.tok}">${e.tok}</span>`).join('');

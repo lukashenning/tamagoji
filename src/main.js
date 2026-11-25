@@ -210,8 +210,8 @@ function lastEntry(who) {
   return null;
 }
 
-/** The bottom-right row: the real signs of the current exchange, yours and its (its dimmer), since
- * your last ✓ ✗ ❓ (they break the sequence; its own don't clear the row). Starts fresh after sleep. */
+/** The bottom-left row: the real signs of the current exchange, yours and its (its dimmer), since
+ * your last ✓ or ✗ (your ❓ and its own specials don't clear the row). Starts fresh after sleep. */
 const ROW_MAX = 5;
 function exchangeRow() {
   const h = s.save.history;
@@ -220,7 +220,7 @@ function exchangeRow() {
     const e = h[i];
     if (e.who === 'S') break;
     if (ELEMENTALS.includes(e.tok)) {
-      if (e.who === 'P') break;
+      if (e.who === 'P' && e.tok !== ASK) break;
       continue;
     }
     if (!s.mind.takenBack.has(i)) row.unshift(e);
@@ -318,7 +318,7 @@ function render() {
   palette.setTitles(tired ? 'Zu müde...' : 'Zuletzt', hourLabel(now));
   if (tired) palette.setSleepy(s.tired);
   else {
-    palette.setRecent(ELEMENTALS, recentEmojis(s.save.history));
+    palette.setRecent([], recentEmojis(s.save.history)); // ✅ ❌ ❓ are gestures, not keys
     palette.setRandom(hourlySet(s.save.seed, now));
   }
   palette.setLocked(!tired && m.awake && m.turn !== 'P');
