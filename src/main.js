@@ -94,11 +94,12 @@ function playerSend(tok) {
 }
 
 // ── gestures on the stage ──
-// tap the creature's centre (between hat and legs) = ✓ · tap anywhere else = ❓ · swipe sideways anywhere = ✗
+// tap the creature (from its hat down to its legs, its middle) = ✓ · tap anywhere else = ❓ · swipe sideways anywhere = ✗
 function gestures(stage, creature) {
   let g = null;
-  // its centre: the middle of its frame, below the hat and above the legs (arms and object don't count)
-  const CENTRE = { left: 0.3, right: 0.7, top: 0.22, bottom: 0.66 }; // shares of the creature's frame
+  // the creature: the middle of its frame, from the top of its hat down to just above its legs (arms
+  // and object don't count)
+  const CENTRE = { left: 0.3, right: 0.7, top: 0.04, bottom: 0.66 }; // shares of the creature's frame
   const inside = (r, x, y) => {
     const fx = (x - r.left) / r.width;
     const fy = (y - r.top) / r.height;
@@ -401,7 +402,8 @@ function addCloud(x) {
   node.style.zIndex = String(Math.round(size));
   node.style.opacity = (front ? 0.22 + Math.random() * 0.3 : 0.35 + Math.random() * 0.45).toFixed(2);
   const H = el.stageHeight();
-  const c = { node, x, y: H * (0.12 + Math.random() * 0.8) - size / 2, w: size * 1.3, speed: 5 + size * 0.07, leaving: false };
+  // anywhere from the top to the bottom of the stage (partly cut off at the edges is fine)
+  const c = { node, x, y: Math.random() * H - size / 2, w: size * 1.3, speed: 5 + size * 0.07, leaving: false };
   (front ? cloudFront : cloudBack).append(node);
   clouds.push(c);
   lastCloudBirth = performance.now();

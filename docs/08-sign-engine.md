@@ -102,7 +102,7 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
   soon nods off again by itself (the nod-off chance and idle time depend on energy).
 - **Sleep clouds**: ☁️ of different sizes (44–140 px) and opacity float slowly across the stage from
   right to left (born outside on the right, gone outside on the left; ~10 px/s, bigger ones a bit
-  faster), over most of its height, some behind the creature and some (fainter) in front of it. How
+  faster), over its whole height, some behind the creature and some (fainter) in front of it. How
   many: 6 at full energy up to 34 (a dense tapestry) when it's empty, smoothly in between, so they thin
   out as it recovers. When it falls asleep the sky fills at once; when it wakes they fade away.
 
@@ -143,7 +143,7 @@ answer with ✗ (also several times), it keeps showing what came before the sign
 plus its newest try, until you send something other than ✗ (the "not that, this" context); it starts fresh after sleep. At most the last 5.
 
 ✓ ✗ ❓ are not on the keyboard (both halves are 16 emojis); you give them only with gestures.
-On the stage: **tap the creature's centre = ✓** (between hat and legs: the middle 40% across, 22–66%
+On the stage: **tap the creature = ✓** (from its hat down to just above its legs: the middle 40% across, 4–66%
 down its frame; arms and object don't count), **tap anywhere else = ❓**, **swipe sideways anywhere on the stage = ✗**.
 On phones the app stays put (no dragging, rubber-banding or pull-to-refresh).
 Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,
