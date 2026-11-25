@@ -48,9 +48,10 @@ back without being asked. Prefer tuning existing parameters.
 
 ## Working agreements
 
-- **Local git only** (since 2026-11-23): no remote, no GitHub for now. Branch `main`; commit each
-  finished, tested change with a short message; tag prototype versions (`v0.10`, …). Repo-local
-  author identity is a placeholder (`lukas@tamagoji.local`).
+- **Git + GitHub** (local since 2026-11-23, GitHub since 2026-11-25): remote `origin` =
+  https://github.com/lukashenning/tamagoji. Branch `main`; commit each finished change with a short
+  message; tag versions (`v0.10`, …, `v1.0`); push only when the user asks. Repo-local author
+  identity is a placeholder (`lukas@tamagoji.local`).
 - **Everything in English**: code, comments, docs, conversation. (The original notes were German;
   the translation lives in `docs/01-vision.md`.) Exception: in-game UI labels the user specified in
   German ("Zuletzt", "16 Uhr", "Zu müde...").
