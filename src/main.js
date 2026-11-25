@@ -83,6 +83,7 @@ function playerSend(tok) {
   if (!m.awake) {
     // asleep: any tap or swipe on the stage wakes it, always as your ❓ (the keyboard is hidden).
     // Woken with little energy, it soon nods off again by itself.
+    setDreaming(false); // the dream sounds stop the moment you wake it
     append({ t: now, who: 'S', tok: WAKE, m: 'manual' });
     tok = ASK;
   } else if (m.turn !== 'P') return;
@@ -99,6 +100,11 @@ function gestures(stage, creature) {
   const inside = (r, x, y) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   stage.addEventListener('pointerdown', (e) => {
     if (e.button > 0) return;
+    if (!s.mind.awake) {
+      // touching the stage while it sleeps wakes it: the dream sounds stop right at the touch
+      s.waking = true;
+      setDreaming(false);
+    }
     g = { x0: e.clientX, y0: e.clientY, t0: performance.now(), far: false };
     stage.setPointerCapture?.(e.pointerId);
   });
@@ -109,11 +115,13 @@ function gestures(stage, creature) {
     if (!g) return;
     const d = g;
     g = null;
-    if (e.type === 'pointercancel') return;
+    if (e.type === 'pointercancel') return void (s.waking = false);
     const dx = e.clientX - d.x0;
     const dy = e.clientY - d.y0;
     if (!d.far && performance.now() - d.t0 < 700) playerSend(inside(creature.getBoundingClientRect(), d.x0, d.y0) ? YES : ASK);
     else if (Math.abs(dx) > Math.max(40, 1.5 * Math.abs(dy))) playerSend(NO); // a mostly sideways swipe
+    else if (!s.mind.awake) playerSend(ASK); // asleep, any touch wakes it (as your ❓)
+    s.waking = false;
   };
   stage.addEventListener('pointerup', end);
   stage.addEventListener('pointercancel', end);
@@ -312,7 +320,7 @@ function render() {
   }
 
   muteBtn.hidden = m.awake; // the dream mute button only while it sleeps
-  setDreaming(!m.awake); // waking cuts the dream sounds off at once; falling asleep opens them (unless muted)
+  setDreaming(!m.awake && !s.waking); // waking cuts the dream sounds off at once; falling asleep opens them (unless muted)
 
   // keyboard: most recent emojis | the hour's random set (✅ ❌ ❓ are gestures, not keys).
   // It slides away while it sleeps and slides back when it wakes.

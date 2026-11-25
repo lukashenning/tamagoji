@@ -123,7 +123,7 @@ Each one also plays its melody as a very quiet glockenspiel in a roomy space (a 
 next dream emoji appears (3 s instead of 0.5 s). While it sleeps, a small speaker button at the top
 right (below the logo) mutes / unmutes these dream sounds (it cuts off their whole audio channel at once, ringing notes and
 reverb included). The channel is open only while it sleeps and you haven't muted it: waking up cuts it
-off at once, falling asleep opens it again unless you muted the dreams; the choice is remembered on the device.
+off at once (when you wake it: the moment your finger touches the stage), falling asleep opens it again unless you muted the dreams; the choice is remembered on the device.
 
 ## Your side: the corner row and gestures
 
