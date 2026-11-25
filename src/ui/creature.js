@@ -94,7 +94,41 @@ export function buildCreature(root) {
     });
   }
 
-  return { render, styleCount };
+  // ── motion ──
+  // Body parts breathe together (one slow, shared swell) and each also wobbles a tiny bit on its own
+  // (a mix of slow waves with its own speeds, so they never move in lockstep). The object floats
+  // more freely: up and down, a little sideways, growing and shrinking. Asleep, everything slows down.
+  const wave = () => ({ f: 0.6 + Math.random() * 0.8, p: Math.random() * 2 * Math.PI });
+  const motion = Object.fromEntries([...LAYERS, 'object'].map((part) => [part, { x: [wave(), wave()], y: [wave(), wave()], s: [wave(), wave()] }]));
+  const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  let clock = 0;
+  let last = performance.now();
+
+  /** Call every animation frame. */
+  function animate(now, asleep) {
+    if (still) return;
+    clock += (Math.min(100, now - last) / 1000) * (asleep ? 0.55 : 1); // seconds, slower while asleep
+    last = now;
+    const t = clock;
+    // a mix of two waves of a part's own speeds: smooth, irregular, between −1 and 1
+    const mix = ([a, b], speed) => 0.6 * Math.sin(2 * Math.PI * a.f * speed * t + a.p) + 0.4 * Math.sin(2 * Math.PI * b.f * speed * 1.7 * t + b.p);
+    const breath = Math.sin((2 * Math.PI * t) / 3.6); // one breath every 3.6 s
+    const unit = root.clientWidth / 252; // movements are given for a 252 px wide creature
+    for (const part of LAYERS) {
+      const m = motion[part];
+      const scale = 1 + 0.012 * breath + 0.006 * mix(m.s, 0.25);
+      const dx = 0.8 * unit * mix(m.x, 0.2);
+      const dy = (0.8 * mix(m.y, 0.2) - 0.6 * breath) * unit; // rises a little when breathing in
+      layers[part].wrap.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)})`;
+    }
+    const o = motion.object;
+    const scale = 1 + 0.09 * mix(o.s, 0.22);
+    const dx = 4 * unit * mix(o.x, 0.15);
+    const dy = 10 * unit * mix(o.y, 0.18);
+    layers.object.wrap.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)}) rotate(${(3 * mix(o.x, 0.12)).toFixed(2)}deg)`;
+  }
+
+  return { render, styleCount, animate };
 }
 
 async function loadArt() {

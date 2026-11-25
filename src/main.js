@@ -306,6 +306,7 @@ function animateDreams() {
     f.node.style.opacity = String(Math.min(1, p / 0.1) * (p > 0.7 ? (1 - p) / 0.3 : 1) * 0.75);
   }
   driftClouds(now);
+  look.animate(now, !s.mind.awake); // the parts breathe, the object floats
   requestAnimationFrame(animateDreams);
 }
 requestAnimationFrame(animateDreams);

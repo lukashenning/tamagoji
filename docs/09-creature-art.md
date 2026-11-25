@@ -25,6 +25,17 @@ part is shown yet or not.
   (`levelAt`, a first guess for about 2 days of play to level 5; to be tuned). The lab panel can set a
   level directly (`level: auto 1 2 3 4 5`).
 
+## Motion
+
+- **Breathing**: all body parts swell together, one breath every 3.6 s (scale ±1.2%, rising
+  0.6 px when breathing in), and each part also wobbles a tiny bit on its own (±0.6% scale, under a
+  pixel of movement), with its own irregular rhythm.
+- **Object**: floats more freely and irregularly: up and down by up to 10 px, sideways up to 4 px,
+  size ±9%, tilting up to 3°.
+- Asleep, all motion runs at a bit over half speed. Movements are given for a 252 px wide creature and
+  scale with it. With the system setting "reduce motion", nothing moves.
+- Code: `animate()` in `src/ui/creature.js`, called every frame.
+
 ## Style and colour
 
 Every emoji has one fixed **style + colour** per part, the same for every creature: the 1,633 emojis
