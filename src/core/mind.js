@@ -519,7 +519,8 @@ export class Mind {
         const c = measureComplexity(s.dream.slice(n - this.p.complexityDreamMin, n), this.p.complexityMinUses);
         this.complexity = { ...c, t };
         this.complexityLog.push(this.complexity);
-        this.level = levelFor(c.value, this.p.levelAt); // it grows or shrinks to its level
+        // it grows or shrinks towards the level its complexity calls for, but one level per sleep at most
+        this.level += Math.sign(levelFor(c.value, this.p.levelAt) - this.level);
         if (this.complexityLog.length > 100) this.complexityLog.shift();
       }
       this.stats.dreamLearned = n;

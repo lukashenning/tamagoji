@@ -209,7 +209,8 @@ export function buildPanel(root, h) {
       for (let i = s.save.history.length - 1; i >= 0; i--) if (s.save.history[i].who === 'C') return s.save.history[i].tok;
       return null;
     })();
-    const auto = m.complexity ? `complexity ${num(m.complexity.value, 1)} → level ${levelFor(m.complexity.value, p.levelAt)}` : 'no complexity measured yet → level 1';
+    const target = m.complexity ? levelFor(m.complexity.value, p.levelAt) : 1;
+    const auto = m.complexity ? `complexity ${num(m.complexity.value, 1)} calls for level ${target}${target !== m.level ? ` (one level per sleep: ${target > m.level ? 'growing' : 'shrinking'} towards it)` : ''}` : 'no complexity measured yet → level 1';
     out.push(`<section><h3>look · parts · voice</h3>
       <div><b>level ${lvl}</b> <span class="dim">(${p.levelOverride ? 'set in the panel; auto would be ' + m.level : 'auto'} · ${auto} · levels 2–5 from complexity ${p.levelAt.join(' / ')})</span></div>
       <div>pose now: <b>${moveText(m.pose)}</b>${lastC && m.moves.has(lastC) ? ` <span class="dim">· move of its sign ${lastC}: ${moveText(m.moves.get(lastC))} · ${m.moves.size} signs have moves</span>` : ''}</div>
