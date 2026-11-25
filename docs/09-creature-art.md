@@ -32,7 +32,7 @@ part is shown yet or not.
   pixel of movement), with its own irregular rhythm.
 - The **object** moves just as subtly. But when the creature says something (a sign or ✓ ✗ ❓), with
   a 33% chance (`objectMoveChance`) it glides (0.8 s) to another spot around the creature, never the same one twice in a row: right or
-  left of it, right or left of its feet, right or left of its hat, on its nose, or on its feet
+  left of it, right or left of its feet, right or left of its hat, or on its feet
   (`OBJECT_SPOTS` in `src/core/look.js`). The spot is picked with the creature's seed, so it is
   rebuilt from the history like everything else.
 - Asleep, all motion runs at a bit over half speed. Movements are given for a 252 px wide creature and

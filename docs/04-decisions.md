@@ -90,3 +90,4 @@
 | D83 | 2026-11-25 | The object moves as subtly as the other parts (revises D82), but each time the creature says something it glides to another of 8 spots: right/left of it, right/left of its feet, right/left of its hat, on its nose, on its feet (seeded, rebuilt from history). | accepted | user |
 | D84 | 2026-11-25 | The coloured background flash for your ✓ ✗ ❓ is removed (the melody stays). | accepted | user |
 | D85 | 2026-11-25 | The object changes its spot only with a 33% chance each time the creature says something (objectMoveChance), not every time. | accepted | user |
+| D86 | 2026-11-25 | "On its nose" is no longer one of the object's spots (7 left). | accepted | user |

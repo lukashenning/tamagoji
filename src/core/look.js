@@ -82,7 +82,6 @@ export const OBJECT_SPOTS = [
   { name: 'left of its feet', at: [0.14, 0.84] },
   { name: 'right of its hat', at: [0.8, 0.14] },
   { name: 'left of its hat', at: [0.2, 0.14] },
-  { name: 'on its nose', at: [0.5, 0.46] },
   { name: 'on its feet', at: [0.5, 0.86] },
 ];
 
