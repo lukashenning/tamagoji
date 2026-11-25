@@ -9,18 +9,21 @@ Code: `src/core/look.js` (rules), `src/ui/creature.js` (drawing), `scripts/build
 |---|---|---|---|
 | 1 | 👀 eyes | 1 | its most used sign |
 | 2 | 🎩 hat | 1 | 2nd most used |
-| 3 | 👄 mouth | 2 | 3rd |
-| 4 | 🦵 legs | 3 | 4th |
-| 5 | 🦾 arms | 4 | 5th |
-| 6 | 🐽 nose | 5 | 6th |
-| 7 | 🎸 object | 6 | 7th (stands to its right, outside its layout) |
+| 3 | 👄 mouth | 1 | 3rd |
+| 4 | 🦵 legs | 2 | 4th |
+| 5 | 🦾 arms | 3 | 5th |
+| 6 | 🐽 nose | 4 | 6th |
+| 7 | 🎸 object | 5 | 7th (stands to its right, outside its layout) |
+
+There are **5 levels** (D81). The looks of all 7 parts always come from the top 7 signs, whether a
+part is shown yet or not.
 
 - "Most used" = in its last 1000 awake outputs. The parts are re-assigned at birth and after each
   sleep; until it has 7 top signs, its seed signs fill up.
 - **Level** comes from complexity (docs/08), set again at each measurement, so it can grow or shrink:
-  level 2 from complexity 3, level 3 from 6, level 4 from 10, level 5 from 15, level 6 from 21
-  (`levelAt`, a first guess for about 2 days of play to level 6; to be tuned). The lab panel can set a
-  level directly (`level: auto 1 2 3 4 5 6`).
+  level 2 from complexity 6, level 3 from 10, level 4 from 15, level 5 from 21
+  (`levelAt`, a first guess for about 2 days of play to level 5; to be tuned). The lab panel can set a
+  level directly (`level: auto 1 2 3 4 5`).
 
 ## Style and colour
 
@@ -80,9 +83,9 @@ is position 3, so ✓ is 1121111.)
 - In the game every drawing becomes **one colour**: the sign's gbc1 colour. Colours too light for thin
   lines on the light background (30 of the 64) are drawn darker: scaled towards black until their
   contrast with the background is at least 2.5 : 1 (same hue, like the colour in shadow; cream → tan).
-- **Detail** is limited by the sheet: on a ~2000 px wide sheet a box is ~210–220 px. Sheets saved
-  straight into the project folder (e.g. `art/incoming/`) at full resolution keep more detail than
-  images pasted into the chat, which may arrive scaled down.
+- **Detail**: the outlines are traced from the sheet, so a sharper sheet gives more exact curves (on a
+  ~2000 px wide sheet a box is ~210–220 px). Sheets saved straight into the project folder (e.g.
+  `art/incoming/`) at full resolution keep more detail than images pasted into the chat.
 
 ## Workflow (what happens when you send a sheet)
 
@@ -92,17 +95,20 @@ is position 3, so ✓ is 1121111.)
    - finds the red boxes (hand-drawn lines are fine: each side is taken where its line mostly runs,
      overshoots and slight slants don't matter), groups them into rows, left to right;
    - takes the dark blue inside each box (grid lines, paper, red and grey writing are dropped),
-     scales it to the **frame** (320 px on the longer side, the shape of the boxes; soft edges,
-     smooth enlarging; fixed by the
+     scales it to the **frame** (320 units on the longer side, the shape of the boxes; fixed by the
      first sheet in `art/parts/frame.json`, later sheets are scaled to the same frame). A box side is a
      long red line across the whole box, so labels next to boxes are never mistaken for sides; all
      boxes on a sheet are assumed to be the same size;
-   - writes monochrome images (white + transparency) to `art/parts/<part>/<NN>/<variant>.png`,
+   - **traces the drawing into vector outlines** (`scripts/vectorize.py`): a light blur so outlines
+     follow the strokes rather than the scan's pixel steps, marching-squares contours, simplified and
+     joined by smooth curves; where a red guide line crosses the drawing, the ink is bridged across;
+   - writes one SVG per variant to `art/parts/<part>/<NN>/<variant>.svg` (viewBox = the frame, one
+     filled path; can be opened and edited in any vector program),
      continuing the style numbers, and keeps the sheet in `art/sheets/` (e.g. `eyes-2.webp`);
    - writes a preview of everything it extracted, which Claude checks (and can show you).
-3. `python3 scripts/build_parts.py` builds what the game loads: `assets/parts/<part>.png` (one
-   atlas per part: a row per style, 6 columns, white + transparency; a few KB each) and
-   `assets/parts/manifest.json` (frame, styles with the variants they have, version).
+3. `python3 scripts/build_parts.py` collects the SVGs into what the game loads:
+   `assets/parts/parts.json` (frame, and per part its styles with the path data of each variant).
+   The game fills the paths in the sign's colour, sharp at any size and screen density.
 4. Check in the game (lab panel: level buttons; the parts table shows style, colour, variant), then
    commit the sheet, the extracted images and the built files together.
 

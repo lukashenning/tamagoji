@@ -14,9 +14,10 @@ from the user's sketch: associations on levels 1–4 (votes, longer contexts cou
 waiting), ☐ chaining, slow fading, dreams (+0.1, plus proximity links the other way round at +0.04,
 D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice. Complexity =
 known signs × order, measured after dreams of ≥ 700 signs (D75). **Creature graphic** (D77,
-`docs/09-creature-art.md`): no body, up to 7 stacked parts from its top 7 signs by rank, level 1–6
-from complexity, per-sign moves, fixed poses; placeholders until the user's art arrives through
-`art/parts/` → `scripts/build_parts.py` → `assets/parts/`. UI: tap creature ✓,
+`docs/09-creature-art.md`): no body, up to 7 stacked parts from its top 7 signs by rank, level 1–5
+from complexity (level 1 = eyes, hat, mouth), per-sign moves, fixed poses. Art: the user's drawing
+sheets → `scripts/extract_parts.py` (traced to SVG in `art/parts/`) → `scripts/build_parts.py` →
+`assets/parts/parts.json`; 5 styles per part so far. UI: tap creature ✓,
 tap around ❓, swipe through ✗, soft flashes, exchange row bottom left; phones/tablets game-only,
 Escape toggles game-only on desktop (D71). Browser storage `tamagoji.creature.exp1` (kept so the
 user's creature survives). Rule checks over simulated play: `jsc -m tests/play.js` (40 creatures ×

@@ -1,10 +1,10 @@
 // Draws the creature from its parts (docs/09-creature-art.md, D77).
 //
-// Art: assets/parts/manifest.json + one atlas per part, assets/parts/<part>.png: one row per style,
-// 6 columns (variants 1–6), every cell the same frame size, monochrome (white + transparency). All
-// parts are drawn on the same frame, already in place, so they simply stack. Each part is coloured
-// with its sign's gbc1 colour. A variant that doesn't exist (an empty box) shows variant 1.
-// Parts without art yet are drawn as simple placeholders, so the system can be tried before the art.
+// Art: assets/parts/parts.json, vector outlines traced from the user's drawing sheets: per part a list
+// of styles, each with variants 1–6 as SVG path data on one shared frame (viewBox = frame). All parts
+// are drawn in place on that frame, so they simply stack. Each part is filled (even-odd) with its
+// sign's gbc1 colour (darkened if too light), sharp at any size and screen density. A variant that
+// doesn't exist (an empty box) shows variant 1. Parts without art are drawn as simple placeholders.
 //
 // Every part is its own layer (.part.part-<name>) with its own transform origin, ready for subtle
 // "breathing" animations later. The object sits to the right of the creature, outside its layout.
@@ -30,44 +30,29 @@ export function buildCreature(root) {
     layers[part] = { wrap, canvas, key: '' };
   }
 
-  let art = null; // { frame: [w, h], parts: { eyes: { styles: [{ name, variants }], image } } }
+  let art = null; // { frame: [w, h], parts: { eyes: { styles: [{ name, variants: { "1": "M…" } }] } } }
   let loaded = false; // nothing is shown until the art has loaded (no placeholder flash)
   loadArt().then((a) => {
     art = a;
     loaded = true;
-    for (const l of Object.values(layers)) l.key = ''; // redraw with the art
   });
 
-  const tinted = new Map(); // "part|style|color" -> canvas with that style's 6 variants, tinted
+  const paths = new Map(); // "part|style|variant" -> Path2D
 
   function styleCount(part) {
     return art?.parts[part]?.styles.length || 1;
   }
 
-  function frameSize(part) {
-    return art?.parts[part]?.styles.length ? art.frame : [PLACEHOLDER_FRAME, PLACEHOLDER_FRAME];
-  }
-
   /** Does this part's style have this variant? (If not, variant 1 is shown.) */
   function hasVariant(part, style, v) {
     const vs = art?.parts[part]?.styles[style]?.variants;
-    return vs ? vs.includes(v) : v <= VARIANTS;
+    return vs ? !!vs[v] : v <= VARIANTS;
   }
 
-  function strip(part, style, color) {
-    const key = `${part}|${style}|${color}`;
-    if (tinted.has(key)) return tinted.get(key);
-    const [w, h] = art.frame;
-    const c = document.createElement('canvas');
-    c.width = w * VARIANTS;
-    c.height = h;
-    const g = c.getContext('2d');
-    g.drawImage(art.parts[part].image, 0, style * h, w * VARIANTS, h, 0, 0, w * VARIANTS, h);
-    g.globalCompositeOperation = 'source-in'; // the drawing in its colour (monochrome art)
-    g.fillStyle = color;
-    g.fillRect(0, 0, c.width, c.height);
-    tinted.set(key, c);
-    return c;
+  function pathOf(part, style, v) {
+    const key = `${part}|${style}|${v}`;
+    if (!paths.has(key)) paths.set(key, new Path2D(art.parts[part].styles[style].variants[v]));
+    return paths.get(key);
   }
 
   /**
@@ -77,6 +62,7 @@ export function buildCreature(root) {
     const shown = loaded ? partsShown(level) : 0;
     const [fw, fh] = art?.frame || [PLACEHOLDER_FRAME, PLACEHOLDER_FRAME];
     root.style.aspectRatio = `${fw} / ${fh}`; // the creature's box has the frame's shape
+    const dpr = window.devicePixelRatio || 1;
     PARTS.forEach((part, i) => {
       const l = layers[part];
       const seat = seats[i];
@@ -86,18 +72,23 @@ export function buildCreature(root) {
       const { style, color: gbc } = lookOf(seat.tok, styleCount(part));
       const color = inkColor(gbc); // too light colours are darkened for the thin lines
       const variant = hasVariant(part, style, pose[i]) ? pose[i] : 1;
-      const key = `${!!art}|${seat.tok}|${style}|${color}|${variant}`;
+      const drawn = !!art?.parts[part]?.styles.length;
+      // the canvas has as many pixels as the screen shows there (sharp on any display)
+      const pw = Math.max(1, Math.round(l.wrap.clientWidth * dpr));
+      const ph = Math.max(1, Math.round(l.wrap.clientHeight * dpr));
+      const key = `${drawn}|${seat.tok}|${style}|${color}|${variant}|${pw}x${ph}`;
       if (key === l.key) return;
       l.key = key;
-      const [w, h] = frameSize(part);
-      l.canvas.width = w;
-      l.canvas.height = h;
+      l.canvas.width = drawn ? pw : PLACEHOLDER_FRAME;
+      l.canvas.height = drawn ? ph : PLACEHOLDER_FRAME;
+      l.canvas.classList.toggle('pixel', !drawn); // placeholders are pixel shapes
       const g = l.canvas.getContext('2d');
-      g.clearRect(0, 0, w, h);
-      const drawn = !!art?.parts[part]?.styles.length;
-      l.canvas.classList.toggle('pixel', !drawn); // placeholders are pixel shapes; the art is smooth
+      g.clearRect(0, 0, l.canvas.width, l.canvas.height);
       if (drawn) {
-        g.drawImage(strip(part, style, color), (variant - 1) * w, 0, w, h, 0, 0, w, h);
+        g.setTransform(pw / fw, 0, 0, ph / fh, 0, 0);
+        g.fillStyle = color;
+        g.fill(pathOf(part, style, variant), 'evenodd');
+        g.setTransform(1, 0, 0, 1, 0, 0);
       } else drawPlaceholder(g, part, variant, color);
       l.wrap.title = `${part}: ${seat.tok} · style ${style + 1} · variant ${variant}`;
     });
@@ -108,23 +99,8 @@ export function buildCreature(root) {
 
 async function loadArt() {
   try {
-    const res = await fetch('assets/parts/manifest.json', { cache: 'no-cache' });
-    if (!res.ok) return null;
-    const m = await res.json();
-    const parts = {};
-    await Promise.all(
-      Object.entries(m.parts || {}).map(async ([part, p]) => {
-        if (!p.styles?.length) return;
-        const image = new Image();
-        const ok = await new Promise((done) => {
-          image.onload = () => done(true);
-          image.onerror = () => done(false); // that part keeps its placeholder
-          image.src = `assets/parts/${part}.png?v=${m.version || 0}`;
-        });
-        if (ok) parts[part] = { ...p, image };
-      }),
-    );
-    return { frame: m.frame, parts };
+    const res = await fetch('assets/parts/parts.json', { cache: 'no-cache' });
+    return res.ok ? await res.json() : null;
   } catch {
     return null; // no art yet: placeholders
   }

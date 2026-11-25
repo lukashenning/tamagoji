@@ -1,7 +1,8 @@
 // The creature's look (D77): it is made of up to 7 parts, one per top sign, shown by level.
 //
 //  - Parts, in rank order: the most used sign drives the eyes, the 2nd the hat, … the 7th the object.
-//  - Level 1–6 from complexity: level L shows the first L + 1 parts (level 1: eyes + hat).
+//  - Level 1–5 from complexity: level L shows the first L + 2 parts (level 1: eyes, hat, mouth;
+//    then legs, arms, nose, object). The parts' looks always come from all 7 top signs.
 //  - Each sign maps to one style + colour (the same for every creature): signs are spread evenly over
 //    the styles a part has, and the 64 gbc1 colours fill up the rest.
 //  - Each style has up to 6 variants; variant 1 is the default. Fixed variants: eyes 2 = closed (asleep),
@@ -27,7 +28,9 @@ export const SLEEP_POSE = pose('eyes', 2);
 /** Fixed poses for ✓ ✗ ❓, yours or its. */
 export const SPECIAL_POSE = { [YES]: pose('mouth', 2), [NO]: pose('mouth', 3), [ASK]: pose('arms', 2) };
 
-/** Level 1–6 for a complexity value. `at` = the complexity needed for levels 2…6. */
+export const MAX_LEVEL = 5;
+
+/** Level 1–5 for a complexity value. `at` = the complexity needed for levels 2…5. */
 export function levelFor(complexity, at) {
   let level = 1;
   for (const x of at) if (complexity >= x) level++;
@@ -35,7 +38,7 @@ export function levelFor(complexity, at) {
 }
 
 /** How many parts a level shows. */
-export const partsShown = (level) => Math.min(PARTS.length, level + 1);
+export const partsShown = (level) => Math.min(PARTS.length, Math.min(level, MAX_LEVEL) + 2);
 
 // every sign's place in one fixed shuffled order (the same for every creature)
 const ORDER = new Map(

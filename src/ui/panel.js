@@ -41,7 +41,7 @@ export function buildPanel(root, h) {
       </div>
       <div class="row"><b>level</b>
         <button data-level="0">auto</button>
-        ${[1, 2, 3, 4, 5, 6].map((n) => `<button data-level="${n}">${n}</button>`).join('')}
+        ${[1, 2, 3, 4, 5].map((n) => `<button data-level="${n}">${n}</button>`).join('')}
         <input type="file" accept="application/json,.json" hidden>
       </div>
       <div class="sliders">
@@ -202,7 +202,7 @@ export function buildPanel(root, h) {
       .map((x, i) => {
         const l = lookOf(x.tok, styles(x.seat));
         const off = i >= shown ? ' class="dim"' : '';
-        return `<tr${off}><td>${i + 1}. ${PART_EMOJI[i]} ${x.seat}</td><td>${x.tok} · style ${l.style + 1}/${styles(x.seat)} · <span class="swatch" style="background:${l.color}"></span> gbc1 #${l.colorIndex + 1}${inkColor(l.color) !== l.color ? ` <span class="dim">(drawn darker</span> <span class="swatch" style="background:${inkColor(l.color)}"></span><span class="dim">)</span>` : ''} · used ${x.uses}× · variant ${m.pose[i]}${i >= shown ? ' · from level ' + i : ''}</td></tr>`;
+        return `<tr${off}><td>${i + 1}. ${PART_EMOJI[i]} ${x.seat}</td><td>${x.tok} · style ${l.style + 1}/${styles(x.seat)} · <span class="swatch" style="background:${l.color}"></span> gbc1 #${l.colorIndex + 1}${inkColor(l.color) !== l.color ? ` <span class="dim">(drawn darker</span> <span class="swatch" style="background:${inkColor(l.color)}"></span><span class="dim">)</span>` : ''} · used ${x.uses}× · variant ${m.pose[i]}${i >= shown ? ' · from level ' + (i - 1) : ''}</td></tr>`;
       })
       .join('');
     const lastC = (() => {
@@ -211,7 +211,7 @@ export function buildPanel(root, h) {
     })();
     const auto = m.complexity ? `complexity ${num(m.complexity.value, 1)} → level ${levelFor(m.complexity.value, p.levelAt)}` : 'no complexity measured yet → level 1';
     out.push(`<section><h3>look · parts · voice</h3>
-      <div><b>level ${lvl}</b> <span class="dim">(${p.levelOverride ? 'set in the panel; auto would be ' + m.level : 'auto'} · ${auto} · levels 2–6 from complexity ${p.levelAt.join(' / ')})</span></div>
+      <div><b>level ${lvl}</b> <span class="dim">(${p.levelOverride ? 'set in the panel; auto would be ' + m.level : 'auto'} · ${auto} · levels 2–5 from complexity ${p.levelAt.join(' / ')})</span></div>
       <div>pose now: <b>${moveText(m.pose)}</b>${lastC && m.moves.has(lastC) ? ` <span class="dim">· move of its sign ${lastC}: ${moveText(m.moves.get(lastC))} · ${m.moves.size} signs have moves</span>` : ''}</div>
       <div>top signs (its last ${p.outputWindow} outputs, ${m.outputs.length} so far): ${top || '–'}</div>
       <h4>parts <span class="dim">(1st sign → eyes, 2nd → hat, …; updated at birth and after each sleep; dim = not shown at this level)</span></h4>

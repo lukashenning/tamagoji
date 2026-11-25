@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Cut a drawing sheet into part images (docs/09-creature-art.md).
+"""Cut a drawing sheet into vector part images (docs/09-creature-art.md).
 
 A sheet holds rows of 6 red boxes; each row is one style of a part, each box one variant (1–6, left
 to right). Red only marks the boxes (and the labels around them); the dark blue drawing inside a box
 is the part. The box is the frame: what is drawn inside is placed the same way inside the frame.
 
-For every box this writes a monochrome image (white + transparency, the frame size) to
-    art/parts/<part>/<NN>/<variant>.png
+For every box the drawing is traced into smooth vector outlines (scripts/vectorize.py) and written as
+    art/parts/<part>/<NN>/<variant>.svg      (viewBox = the frame, one filled path)
 continuing the style numbers already there. Empty boxes write nothing (that variant shows variant 1).
-The sheet itself is kept in art/sheets/. A preview of what was extracted is written for checking.
+The sheet itself is kept in art/sheets/. A preview of what was extracted can be written (SVG).
 
-Run:  python3 scripts/extract_parts.py <sheet image> <part> [--rows eyes,eyes,hat,…] [--preview out.png]
+Run:  python3 scripts/extract_parts.py <sheet image> <part> [--rows eyes,eyes,hat,…] [--preview out.svg]
       then python3 scripts/build_parts.py
 """
 
@@ -22,15 +22,16 @@ import statistics
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pngio import read_rgba, write_mask, write_png  # noqa: E402
+from pngio import read_rgba  # noqa: E402
+from vectorize import trace, svg_file  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, 'art', 'parts')
 SHEETS = os.path.join(ROOT, 'art', 'sheets')
 FRAME_FILE = os.path.join(ART, 'frame.json')
 PARTS = ['eyes', 'hat', 'mouth', 'legs', 'arms', 'nose', 'object']
-LONG_SIDE = 320  # frame size in pixels along its longer side (set once, kept in art/parts/frame.json);
-# about 1.5 × the boxes on a ~2000 px sheet, so the creature stays sharp when shown large
+LONG_SIDE = 320  # frame size in units along its longer side (set once, kept in art/parts/frame.json);
+# the art is vector, so this only sets the coordinate scale (0.1 unit precision)
 BLOCK = 4  # px per cell when looking for the boxes
 
 
@@ -158,35 +159,33 @@ def inside(rows, s):
     return (x0 + L, [y0 + t for t in tops], x0 + Rt, y0 + B)
 
 
-def cut(rows, box, fw, fh):
-    """The drawing inside a box, scaled to the frame: rows of alpha 0…255. Enlarging: smooth
-    (bilinear) interpolation; shrinking: area average."""
+def ink_grid(rows, box):
+    """Ink amount (0…1) of every pixel inside a box, at the sheet's own resolution. Where a red guide
+    line covers the drawing, the ink is bridged across it if it continues on both sides."""
     L, T, R, B = box
-    sw, sh = R - L, B - T
-    src = [[ink(*rows[y][x * 4:x * 4 + 3]) if rows[y][x * 4 + 3] > 0 else 0.0 for x in range(L, R)] for y in range(T, B)]
-    out = []
-    if sw > 1.2 * fw:
-        for ty in range(fh):
-            ya, yb = int(ty * sh / fh), max(int(ty * sh / fh) + 1, int((ty + 1) * sh / fh))
-            line = []
-            for tx in range(fw):
-                xa, xb = int(tx * sw / fw), max(int(tx * sw / fw) + 1, int((tx + 1) * sw / fw))
-                total = sum(src[y][x] for y in range(ya, yb) for x in range(xa, xb))
-                line.append(round(255 * total / ((yb - ya) * (xb - xa))))
-            out.append(line)
-        return out
-    for ty in range(fh):
-        sy = min(sh - 1.001, max(0.0, (ty + 0.5) * sh / fh - 0.5))
-        y0, fy = int(sy), sy - int(sy)
-        r0, r1 = src[y0], src[y0 + 1]
-        line = []
-        for tx in range(fw):
-            sx = min(sw - 1.001, max(0.0, (tx + 0.5) * sw / fw - 0.5))
-            x0, fx = int(sx), sx - int(sx)
-            a = (r0[x0] * (1 - fx) + r0[x0 + 1] * fx) * (1 - fy) + (r1[x0] * (1 - fx) + r1[x0 + 1] * fx) * fy
-            line.append(round(255 * a))
-        out.append(line)
-    return out
+    grid = [[ink(*rows[y][x * 4:x * 4 + 3]) if rows[y][x * 4 + 3] > 0 else 0.0 for x in range(L, R)] for y in range(T, B)]
+    red = [[is_red(*rows[y][x * 4:x * 4 + 3]) for x in range(L, R)] for y in range(T, B)]
+    h, w = len(grid), len(grid[0])
+
+    def reach(y, x, dy, dx):
+        for step in range(1, 6):
+            yy, xx = y + dy * step, x + dx * step
+            if not (0 <= yy < h and 0 <= xx < w):
+                return 0.0
+            if not red[yy][xx]:
+                return grid[yy][xx]
+        return 0.0
+
+    fill = {}
+    for y in range(h):
+        for x in range(w):
+            if red[y][x]:
+                v = max(min(reach(y, x, dy, dx), reach(y, x, -dy, -dx)) for dy, dx in ((0, 1), (1, 0), (1, 1), (1, -1)))
+                if v > 0.2:
+                    fill[(y, x)] = v
+    for (y, x), v in fill.items():
+        grid[y][x] = v
+    return grid
 
 
 def frame_size(lines, save=True):
@@ -203,20 +202,19 @@ def frame_size(lines, save=True):
 
 
 def preview(path, cells, fw, fh):
-    """A contact sheet of what was extracted: one row per style, 6 frames (dark ink on light grey)."""
-    pad, n = 6, len(cells)
-    W, H = 6 * (fw + pad) + pad, n * (fh + pad) + pad
-    img = [bytearray([236, 236, 236] * W) for _ in range(H)]
+    """An SVG contact sheet of what was extracted: one row per style, 6 frames."""
+    pad = 8
+    W, H = 6 * (fw + pad) + pad, len(cells) * (fh + pad) + pad
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
+           f'<rect width="{W}" height="{H}" fill="#ececec"/>']
     for r, variants in enumerate(cells):
-        for v, alpha in enumerate(variants):
-            ox, oy = pad + v * (fw + pad), pad + r * (fh + pad)
-            for y in range(fh):
-                for x in range(fw):
-                    a = alpha[y][x] / 255 if alpha else 0
-                    base = (255, 255, 255) if alpha else (215, 205, 205)
-                    px = [round(base[k] * (1 - a) + (20, 10, 110)[k] * a) for k in range(3)]
-                    img[oy + y][(ox + x) * 3:(ox + x) * 3 + 3] = bytes(px)
-    write_png(path, W, H, img, 2)
+        for v, d in enumerate(variants):
+            x, y = pad + v * (fw + pad), pad + r * (fh + pad)
+            out.append(f'<rect x="{x}" y="{y}" width="{fw}" height="{fh}" fill="{"#fff" if d else "#d7cdcd"}"/>')
+            if d:
+                out.append(f'<path transform="translate({x} {y})" fill="#1a0a6e" fill-rule="evenodd" d="{d}"/>')
+    out.append('</svg>')
+    open(path, 'w').write('\n'.join(out))
 
 
 def main():
@@ -224,7 +222,7 @@ def main():
     ap.add_argument('sheet')
     ap.add_argument('part', choices=PARTS, help='the part of every row (or use --rows)')
     ap.add_argument('--rows', help='comma-separated part per row, if a sheet mixes parts')
-    ap.add_argument('--preview', help='write a preview image of what was extracted here')
+    ap.add_argument('--preview', help='write a preview (SVG) of what was extracted here')
     ap.add_argument('--dry', action='store_true', help='only find the boxes and write the preview')
     a = ap.parse_args()
 
@@ -245,8 +243,10 @@ def main():
     for line in lines:
         variants = []
         for box in line[:6]:
-            alpha = cut(rows, box, fw, fh)
-            variants.append(alpha if max(max(r) for r in alpha) > 80 and sum(map(sum, alpha)) > 255 * 5 else None)  # tiny dots count too
+            grid = ink_grid(rows, box)
+            inked = max(max(r) for r in grid) > 0.3 and sum(map(sum, grid)) > 5  # tiny dots count too
+            d = trace(grid, fw / (box[2] - box[0]), fh / (box[3] - box[1])) if inked else ''
+            variants.append(d or None)
         cells.append(variants)
     if a.preview:
         preview(a.preview, cells, fw, fh)
@@ -262,9 +262,10 @@ def main():
         if variants[0] is None:
             print(f'  {part} {style}: variant 1 (default) is empty, skipped the row')
             continue
-        for v, alpha in enumerate(variants, 1):
-            if alpha:
-                write_mask(os.path.join(folder, style, f'{v}.png'), fw, fh, alpha)
+        os.makedirs(os.path.join(folder, style), exist_ok=True)
+        for v, d in enumerate(variants, 1):
+            if d:
+                open(os.path.join(folder, style, f'{v}.svg'), 'w').write(svg_file(d, fw, fh))
         print(f'  {part}/{style}: variants {", ".join(str(v) for v, x in enumerate(variants, 1) if x)}')
     if os.path.abspath(a.sheet).startswith(SHEETS + os.sep):
         return  # re-extracting a kept sheet: it's already there

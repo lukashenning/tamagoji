@@ -6,7 +6,7 @@ import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, isElemental } from './tokens.
 import { measureComplexity } from './complexity.js';
 import { rngFor, sample, pick, hashString } from './rng.js';
 import { makeCharacter, ALL } from './emojiIndex.js';
-import { PARTS, DEFAULT_POSE, SLEEP_POSE, SPECIAL_POSE, levelFor, randomMove, mutateMove } from './look.js';
+import { PARTS, DEFAULT_POSE, SLEEP_POSE, SPECIAL_POSE, MAX_LEVEL, levelFor, randomMove, mutateMove } from './look.js';
 import { hourlySet } from './keyboard.js';
 import { Assoc, strength } from './assoc.js';
 
@@ -512,8 +512,8 @@ export class Mind {
     this.seats = toks.map((tok, i) => ({ seat: PARTS[i], tok, uses: uses.get(tok) || 0 }));
   }
 
-  /** The level shown: set by the lab panel (levelOverride 1–6) or from complexity. */
+  /** The level shown: set by the lab panel (levelOverride 1–5) or from complexity. */
   shownLevel() {
-    return this.p.levelOverride || this.level;
+    return Math.min(MAX_LEVEL, this.p.levelOverride || this.level);
   }
 }
