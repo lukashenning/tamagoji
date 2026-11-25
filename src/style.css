@@ -281,18 +281,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .logo svg { display: block; width: 100%; height: auto; overflow: visible; }
 .logo text {
-  font: 54px 'Mochiy Pop One', 'Arial Rounded MT Bold', 'Baloo 2', ui-rounded, system-ui, sans-serif;
-  stroke: #6b4a55;
-  stroke-width: 5px;
-  stroke-linejoin: round;
-  paint-order: stroke fill;
+  /* one colour, normal letter shapes; the size makes the word span the width */
+  font: 59px 'Mochiy Pop One', 'Arial Rounded MT Bold', ui-rounded, system-ui, sans-serif;
+  fill: #e48da4;
 }
-.logo .l1 { fill: #f7a8bb; }
-.logo .l2 { fill: #ffd29a; }
-.logo .l3 { fill: #fff09a; }
-.logo .l4 { fill: #b8e8c2; }
-.logo .l5 { fill: #a9d8f5; }
-.logo .l6 { fill: #d6c2f2; }
 .logo:active svg { transform: scale(0.97); }
 .logo svg { transition: transform 0.15s; }
 
