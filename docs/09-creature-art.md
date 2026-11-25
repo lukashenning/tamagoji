@@ -30,8 +30,8 @@ part is shown yet or not.
 - **Breathing**: all body parts swell together, one breath every 3.6 s (scale ±1.2%, rising
   0.6 px when breathing in), and each part also wobbles a tiny bit on its own (±0.6% scale, under a
   pixel of movement), with its own irregular rhythm.
-- The **object** moves just as subtly. But whenever the creature says something (a sign or ✓ ✗ ❓),
-  it glides (0.8 s) to another spot around the creature, never the same one twice in a row: right or
+- The **object** moves just as subtly. But when the creature says something (a sign or ✓ ✗ ❓), with
+  a 33% chance (`objectMoveChance`) it glides (0.8 s) to another spot around the creature, never the same one twice in a row: right or
   left of it, right or left of its feet, right or left of its hat, on its nose, or on its feet
   (`OBJECT_SPOTS` in `src/core/look.js`). The spot is picked with the creature's seed, so it is
   rebuilt from the history like everything else.

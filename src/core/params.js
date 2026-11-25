@@ -58,6 +58,7 @@ export const DEFAULT_PARAMS = {
   outputWindow: 1000, // ranked by use in its last this many outputs
   seats: 7, // one per part: eyes, hat, mouth, legs, arms, nose, object (D77)
   levelAt: [6, 10, 15, 21], // complexity needed for levels 2…5 (rough: ~2 days of play to level 5)
+  objectMoveChance: 0.33, // each time it says something, its object moves to another spot with this chance
   levelOverride: 0, // lab panel: show this level (1–5) instead of the one from complexity; 0 = off
 
 

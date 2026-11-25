@@ -177,9 +177,11 @@ export class Mind {
 
   /** You sent ✅ ❌ or ❓ (☐: "your turn"). */
   /** Your answer to its last real sign changes that sign's move: ✓ keeps it, ✗ re-rolls it, anything else changes one digit. */
-  /** It says something: its object moves to another spot around it. */
+  /** It says something: sometimes (objectMoveChance) its object moves to another spot around it. */
   moveObject() {
-    const k = Math.floor(rngFor(this.seed, 'spot', this.h)() * (OBJECT_SPOTS.length - 1));
+    const rng = rngFor(this.seed, 'spot', this.h);
+    if (rng() >= this.p.objectMoveChance) return;
+    const k = Math.floor(rng() * (OBJECT_SPOTS.length - 1));
     this.objectSpot = k >= this.objectSpot ? k + 1 : k;
   }
 
