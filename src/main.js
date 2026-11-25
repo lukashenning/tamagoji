@@ -409,6 +409,7 @@ function addCloud(x) {
   // is fine); never so high that they touch the logo
   const centre = H * (0.28 + 0.74 * Math.sqrt(Math.random())); // denser towards the bottom
   const c = { node, x, y: Math.max(H * 0.1, centre - size / 2), w: size * 1.3, speed: 5 + size * 0.07, leaving: false };
+  node.style.transform = `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px)`; // in place from the start (no flash at the top left)
   (front ? cloudFront : cloudBack).append(node);
   clouds.push(c);
   lastCloudBirth = performance.now();
