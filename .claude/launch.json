@@ -4,7 +4,20 @@
     {
       "name": "tamagoji",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["scripts/serve.py", "5173"],
+      "runtimeArgs": [
+        "scripts/serve.py",
+        "5173"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "tamagoji-phone",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "scripts/serve.py",
+        "5173",
+        "--lan"
+      ],
       "port": 5173
     }
   ]

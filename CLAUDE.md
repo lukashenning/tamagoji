@@ -97,3 +97,5 @@ Plain JavaScript ES modules, no build step · vanilla DOM · hand-written tiny n
 JavaScriptCore. A small service worker (`sw.js`) always loads the newest files (network first,
 offline fallback). TypeScript + Vite later, once Node is available.
 Manual testing via the test panel; headless bot players maybe later (D25).
+Local server: `python3 scripts/serve.py` (this Mac only) or `python3 scripts/serve.py 5173 --lan`
+(also from a phone on the same Wi-Fi; launch config `tamagoji-phone`).
