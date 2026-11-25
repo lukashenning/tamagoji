@@ -7,9 +7,10 @@
 // doesn't exist (an empty box) shows variant 1. Parts without art are drawn as simple placeholders.
 //
 // Every part is its own layer (.part.part-<name>) with its own transform origin, ready for subtle
-// "breathing" animations later. The object sits to the right of the creature, outside its layout.
+// The object stands somewhere around the creature (OBJECT_SPOTS), outside its layout; it moves to
+// another spot whenever the creature says something.
 
-import { PARTS, VARIANTS, lookOf, partsShown, inkColor } from '../core/look.js';
+import { PARTS, VARIANTS, OBJECT_SPOTS, lookOf, partsShown, inkColor } from '../core/look.js';
 
 // back to front (the object is drawn separately, to the right)
 const LAYERS = ['legs', 'arms', 'eyes', 'nose', 'mouth', 'hat'];
@@ -58,8 +59,12 @@ export function buildCreature(root) {
   /**
    * @param {{ seats: { seat: string, tok: string }[], pose: number[], level: number }} look
    */
-  function render({ seats, pose, level }) {
+  function render({ seats, pose, level, spot = 0 }) {
     const shown = loaded ? partsShown(level) : 0;
+    // the object's place around the creature (it glides there: CSS transition)
+    const [sx, sy] = OBJECT_SPOTS[spot].at;
+    layers.object.wrap.style.left = `${(sx * 100 - 25).toFixed(1)}%`;
+    layers.object.wrap.style.top = `${(sy * 100 - 25).toFixed(1)}%`;
     const [fw, fh] = art?.frame || [PLACEHOLDER_FRAME, PLACEHOLDER_FRAME];
     root.style.aspectRatio = `${fw} / ${fh}`; // the creature's box has the frame's shape
     const dpr = window.devicePixelRatio || 1;
@@ -95,9 +100,9 @@ export function buildCreature(root) {
   }
 
   // ── motion ──
-  // Body parts breathe together (one slow, shared swell) and each also wobbles a tiny bit on its own
-  // (a mix of slow waves with its own speeds, so they never move in lockstep). The object floats
-  // more freely: up and down, a little sideways, growing and shrinking. Asleep, everything slows down.
+  // All parts (the object too) breathe together (one slow, shared swell) and each also wobbles a tiny
+  // bit on its own (a mix of slow waves with its own speeds, so they never move in lockstep).
+  // Asleep, everything slows down.
   const wave = () => ({ f: 0.6 + Math.random() * 0.8, p: Math.random() * 2 * Math.PI });
   const motion = Object.fromEntries([...LAYERS, 'object'].map((part) => [part, { x: [wave(), wave()], y: [wave(), wave()], s: [wave(), wave()] }]));
   const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -114,18 +119,13 @@ export function buildCreature(root) {
     const mix = ([a, b], speed) => 0.6 * Math.sin(2 * Math.PI * a.f * speed * t + a.p) + 0.4 * Math.sin(2 * Math.PI * b.f * speed * 1.7 * t + b.p);
     const breath = Math.sin((2 * Math.PI * t) / 3.6); // one breath every 3.6 s
     const unit = root.clientWidth / 252; // movements are given for a 252 px wide creature
-    for (const part of LAYERS) {
+    for (const part of [...LAYERS, 'object']) {
       const m = motion[part];
       const scale = 1 + 0.012 * breath + 0.006 * mix(m.s, 0.25);
       const dx = 0.8 * unit * mix(m.x, 0.2);
       const dy = (0.8 * mix(m.y, 0.2) - 0.6 * breath) * unit; // rises a little when breathing in
       layers[part].wrap.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)})`;
     }
-    const o = motion.object;
-    const scale = 1 + 0.09 * mix(o.s, 0.22);
-    const dx = 4 * unit * mix(o.x, 0.15);
-    const dy = 10 * unit * mix(o.y, 0.18);
-    layers.object.wrap.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)}) rotate(${(3 * mix(o.x, 0.12)).toFixed(2)}deg)`;
   }
 
   return { render, styleCount, animate };

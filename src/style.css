@@ -90,9 +90,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .part[hidden] { display: none; }
 .part canvas { display: block; width: 100%; height: 100%; }
 .part canvas.pixel { image-rendering: pixelated; }
-/* the object stands to its right at half size, so it still fits on a phone (its frame's empty left
-   margin may overlap the creature's empty right margin) */
-.part-object { left: 74%; right: auto; top: 25%; bottom: 25%; width: 50%; }
+/* the object: half size, somewhere around the creature (left/top set by creature.js); it glides to
+   a new spot whenever the creature says something */
+.part-object {
+  inset: auto;
+  left: 74%;
+  top: 25%;
+  width: 50%;
+  height: 50%;
+  transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1), top 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
 .bubble {
   position: relative;
   min-width: 84px;

@@ -71,6 +71,21 @@ export function mutateMove(move, rng) {
 
 export const moveText = (move) => move.join('');
 
+/**
+ * Where the object can stand, as the centre of its (half-size) frame in the creature's frame
+ * (0…1 across, 0…1 down). Whenever the creature says something, it moves to another one.
+ */
+export const OBJECT_SPOTS = [
+  { name: 'right of it', at: [0.99, 0.5] },
+  { name: 'left of it', at: [0.01, 0.5] },
+  { name: 'right of its feet', at: [0.86, 0.84] },
+  { name: 'left of its feet', at: [0.14, 0.84] },
+  { name: 'right of its hat', at: [0.8, 0.14] },
+  { name: 'left of its hat', at: [0.2, 0.14] },
+  { name: 'on its nose', at: [0.5, 0.46] },
+  { name: 'on its feet', at: [0.5, 0.86] },
+];
+
 // ── colours for line art ──
 // Thin monochrome lines in very light gbc1 colours (cream, off-white, pale blue …) would hardly show
 // on the light background, so the parts are drawn in a darker shade of such colours: the colour scaled

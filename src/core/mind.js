@@ -6,7 +6,7 @@ import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, isElemental } from './tokens.
 import { measureComplexity } from './complexity.js';
 import { rngFor, sample, pick, hashString } from './rng.js';
 import { makeCharacter, ALL } from './emojiIndex.js';
-import { PARTS, DEFAULT_POSE, SLEEP_POSE, SPECIAL_POSE, MAX_LEVEL, levelFor, randomMove, mutateMove } from './look.js';
+import { PARTS, DEFAULT_POSE, SLEEP_POSE, SPECIAL_POSE, MAX_LEVEL, OBJECT_SPOTS, levelFor, randomMove, mutateMove } from './look.js';
 import { hourlySet } from './keyboard.js';
 import { Assoc, strength } from './assoc.js';
 
@@ -55,6 +55,7 @@ export class Mind {
     this.pose = DEFAULT_POSE.slice(); // the variants shown now
     this.awaiting = null; // its last real sign, waiting for your answer (which changes that sign's move)
     this.level = 1; // from complexity
+    this.objectSpot = 0; // where its object stands (OBJECT_SPOTS); another spot each time it says something
 
     this.stats = { yes: 0, no: 0, takenBack: 0, dreamLearned: 0 };
 
@@ -82,8 +83,11 @@ export class Mind {
       this.answerMove(tok);
       if (isElemental(tok)) this.playerSpecial(tok, e.t);
       else this.playerSign(tok, e.t);
-    } else if (isElemental(tok)) this.creatureSpecial(tok);
-    else this.creatureSign(tok);
+    } else {
+      this.moveObject();
+      if (isElemental(tok)) this.creatureSpecial(tok);
+      else this.creatureSign(tok);
+    }
   }
 
   born(e) {
@@ -173,6 +177,12 @@ export class Mind {
 
   /** You sent ✅ ❌ or ❓ (☐: "your turn"). */
   /** Your answer to its last real sign changes that sign's move: ✓ keeps it, ✗ re-rolls it, anything else changes one digit. */
+  /** It says something: its object moves to another spot around it. */
+  moveObject() {
+    const k = Math.floor(rngFor(this.seed, 'spot', this.h)() * (OBJECT_SPOTS.length - 1));
+    this.objectSpot = k >= this.objectSpot ? k + 1 : k;
+  }
+
   answerMove(tok) {
     const sign = this.awaiting;
     this.awaiting = null;

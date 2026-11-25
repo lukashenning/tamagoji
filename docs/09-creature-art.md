@@ -13,7 +13,7 @@ Code: `src/core/look.js` (rules), `src/ui/creature.js` (drawing), `scripts/build
 | 4 | 🦵 legs | 2 | 4th |
 | 5 | 🦾 arms | 3 | 5th |
 | 6 | 🐽 nose | 4 | 6th |
-| 7 | 🎸 object | 5 | 7th (stands to its right, outside its layout) |
+| 7 | 🎸 object | 5 | 7th (stands somewhere around it, outside its layout; see Motion) |
 
 There are **5 levels** (D81). The looks of all 7 parts always come from the top 7 signs, whether a
 part is shown yet or not.
@@ -30,8 +30,11 @@ part is shown yet or not.
 - **Breathing**: all body parts swell together, one breath every 3.6 s (scale ±1.2%, rising
   0.6 px when breathing in), and each part also wobbles a tiny bit on its own (±0.6% scale, under a
   pixel of movement), with its own irregular rhythm.
-- **Object**: floats more freely and irregularly: up and down by up to 10 px, sideways up to 4 px,
-  size ±9%, tilting up to 3°.
+- The **object** moves just as subtly. But whenever the creature says something (a sign or ✓ ✗ ❓),
+  it glides (0.8 s) to another spot around the creature, never the same one twice in a row: right or
+  left of it, right or left of its feet, right or left of its hat, on its nose, or on its feet
+  (`OBJECT_SPOTS` in `src/core/look.js`). The spot is picked with the creature's seed, so it is
+  rebuilt from the history like everything else.
 - Asleep, all motion runs at a bit over half speed. Movements are given for a 252 px wide creature and
   scale with it. With the system setting "reduce motion", nothing moves.
 - Code: `animate()` in `src/ui/creature.js`, called every frame.

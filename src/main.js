@@ -315,7 +315,7 @@ function render() {
   const m = s.mind;
   const now = s.clock.now();
   el.creature.classList.toggle('asleep', !m.awake);
-  look.render({ seats: m.seats, pose: m.pose, level: m.shownLevel() });
+  look.render({ seats: m.seats, pose: m.pose, level: m.shownLevel(), spot: m.objectSpot });
 
   if (!m.awake && m.sleep) {
     el.bubble.className = 'bubble empty';
