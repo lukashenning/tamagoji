@@ -11,15 +11,6 @@ import { Assoc, strength } from './assoc.js';
 
 export const SEATS = ['body', 'eyes', 'mouth', 'limbs', 'crest', 'accessory'];
 
-/**
- * Chance that your sign wakes it while it sleeps, from its energy (0…1): never below tiredBelow (10%),
- * rising steadily to 70% at 70% energy, always at full energy.
- */
-export function wakeChance(energyFraction, p) {
-  if (energyFraction >= 1) return 1;
-  return Math.min(1, Math.max(0, ((energyFraction - p.tiredBelow) * 0.7) / (0.7 - p.tiredBelow)));
-}
-
 const pct = (x) => `${Math.round(x * 100)}%`;
 
 export class Mind {

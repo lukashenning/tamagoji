@@ -1,10 +1,10 @@
 // App: the time loop, player input, and the game view.
 // The history is the creature: every event is appended to it and observed by the mind.
 
-import { Mind, wakeChance } from './core/mind.js';
+import { Mind } from './core/mind.js';
 import { ENGINE_VERSION } from './core/params.js';
 import { SLEEP, WAKE, YES, NO, ASK, ELEMENTALS } from './core/tokens.js';
-import { recentEmojis, hourlySet, hourLabel } from './core/keyboard.js';
+import { recentEmojis, hourlySet } from './core/keyboard.js';
 import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
@@ -40,7 +40,6 @@ const s = {
   replyAt: null,
   wakeAt: null,
   dreamShown: -1,
-  tired: null, // "Zu müde...": the slots (0–31) that still show a 💤 to tap away, else null
   saveInfo: { bytes: 0, pruned: 0 },
 };
 
@@ -51,7 +50,6 @@ function load(save) {
   s.why = null;
   s.replyAt = s.wakeAt = null;
   s.dreamShown = -1;
-  s.tired = null;
   persist();
 }
 
@@ -82,20 +80,10 @@ function playerSend(tok) {
   const now = s.clock.now();
   const m = s.mind;
   if (!m.awake) {
-    // asleep: a sign only sometimes wakes it. Never below 10% energy, 70% at 70% energy, always when full.
-    if (s.tired) return;
-    if (Math.random() >= wakeChance(m.energyAt(now) / m.capacity, s.params)) {
-      // "Zu müde...": a few 💤 strewn over the keyboard; tap them all away to get the keys back
-      const slots = [...Array(32).keys()];
-      for (let i = slots.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [slots[i], slots[j]] = [slots[j], slots[i]];
-      }
-      s.tired = new Set(slots.slice(0, s.params.tiredZz));
-      render();
-      return;
-    }
+    // asleep: any tap or swipe on the stage wakes it, always as your ❓ (the keyboard is hidden).
+    // Woken with little energy, it soon nods off again by itself.
     append({ t: now, who: 'S', tok: WAKE, m: 'manual' });
+    tok = ASK;
   } else if (m.turn !== 'P') return;
   append({ t: s.clock.now(), who: 'P', tok });
   if (ELEMENTALS.includes(tok)) {
@@ -316,6 +304,7 @@ function animateDreams() {
     f.node.style.transform = `translateY(${(-RISE_PX * p).toFixed(1)}px) scale(${(0.7 + 1.2 * p).toFixed(3)})`;
     f.node.style.opacity = String(Math.min(1, p / 0.1) * (p > 0.7 ? (1 - p) / 0.3 : 1) * 0.75);
   }
+  driftClouds(now);
   requestAnimationFrame(animateDreams);
 }
 requestAnimationFrame(animateDreams);
@@ -342,17 +331,69 @@ function render() {
     renderRow(exchangeRow());
   }
 
-  // keyboard: "Zuletzt" (pinned signs + most recent emojis) | the hour's random set ("16 Uhr")
-  // too tired: tap away the 💤 (or wait until it wakes by itself) to get the keyboard back
-  if (s.tired && m.awake) s.tired = null;
-  const tired = !!s.tired;
-  palette.setTitles(tired ? 'Zu müde...' : 'Zuletzt', hourLabel(now));
-  if (tired) palette.setSleepy(s.tired);
-  else {
-    palette.setRecent([], recentEmojis(s.save.history)); // ✅ ❌ ❓ are gestures, not keys
-    palette.setRandom(hourlySet(s.save.seed, now));
+  // keyboard: most recent emojis | the hour's random set (✅ ❌ ❓ are gestures, not keys).
+  // It slides away while it sleeps and slides back when it wakes.
+  palette.setRecent(recentEmojis(s.save.history));
+  palette.setRandom(hourlySet(s.save.seed, now));
+  palette.setLocked(m.awake && m.turn !== 'P');
+  slideKeyboard(m.awake);
+  sleepClouds(m.awake ? 0 : 1 - m.energyAt(now) / m.capacity);
+}
+
+// the keyboard slides down out of view (the stage grows into its place) and back up
+const kbWrap = document.getElementById('palette-wrap');
+let kbShown = null;
+function slideKeyboard(show) {
+  if (show === kbShown) return;
+  const first = kbShown === null;
+  kbShown = show;
+  const full = kbWrap.firstElementChild.offsetHeight;
+  if (first) {
+    kbWrap.style.height = show ? '' : '0px';
+    return;
   }
-  palette.setLocked(!tired && m.awake && m.turn !== 'P');
+  kbWrap.style.height = (show ? 0 : full) + 'px';
+  kbWrap.offsetHeight; // start the transition from here
+  kbWrap.style.height = (show ? full : 0) + 'px';
+  if (show) kbWrap.addEventListener('transitionend', () => kbShown && (kbWrap.style.height = ''), { once: true });
+}
+
+// sleeping: soft clouds drift below it, the more the more tired it is; they thin out one by one as
+// its energy comes back (none when it's nearly rested)
+const CLOUDS_MAX = 14;
+const clouds = []; // { node, x, y, amp, period, phase, leaving }
+const cloudBox = document.getElementById('clouds');
+function sleepClouds(tiredness) {
+  const want = Math.round(CLOUDS_MAX * Math.max(0, Math.min(1, tiredness)));
+  const here = clouds.filter((c) => !c.leaving);
+  for (let i = here.length; i < want; i++) {
+    const node = document.createElement('span');
+    node.className = 'cloud';
+    node.textContent = '☁️';
+    const size = 16 + Math.random() * 30;
+    node.style.fontSize = size.toFixed(0) + 'px';
+    node.style.zIndex = String(Math.round(size)); // bigger ones in front
+    const c = { node, x: (Math.random() - 0.5) * 190, y: Math.random() * 46, amp: 8 + Math.random() * 18, period: 9000 + Math.random() * 12000, phase: Math.random() * 6.3, alpha: 0.25 + Math.random() * 0.5, leaving: false };
+    cloudBox.append(node);
+    clouds.push(c);
+    requestAnimationFrame(() => (node.style.opacity = c.alpha.toFixed(2))); // fade in
+  }
+  for (let i = here.length; i > want; i--) {
+    const c = here[Math.floor(Math.random() * here.length)];
+    if (c.leaving) continue;
+    c.leaving = true;
+    c.node.style.opacity = '0'; // fade out, then go
+    setTimeout(() => {
+      c.node.remove();
+      clouds.splice(clouds.indexOf(c), 1);
+    }, 2500);
+  }
+}
+function driftClouds(now) {
+  for (const c of clouds) {
+    const a = (now / c.period) * 2 * Math.PI + c.phase;
+    c.node.style.transform = `translate(${(c.x + c.amp * Math.sin(a)).toFixed(1)}px, ${(c.y + 0.25 * c.amp * Math.sin(2 * a)).toFixed(1)}px)`;
+  }
 }
 
 // ── panel handlers ──
@@ -433,12 +474,6 @@ confirmBox.addEventListener('click', (e) => e.target === confirmBox && (confirmB
 // ── start ──
 const palette = buildPalette(document.getElementById('palette'), {
   onPick: playerSend,
-  onZz(slot) {
-    if (!s.tired) return;
-    s.tired.delete(slot);
-    if (!s.tired.size) s.tired = null; // all tapped away: the keyboard is back
-    render();
-  },
 });
 gestures(document.querySelector('.stage'), el.creature);
 const updatePanel = buildPanel(document.getElementById('panel'), handlers);

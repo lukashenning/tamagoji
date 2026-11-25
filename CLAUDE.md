@@ -55,7 +55,7 @@ back without being asked. Prefer tuning existing parameters.
   identity is a placeholder (`lukas@tamagoji.local`).
 - **Everything in English**: code, comments, docs, conversation. (The original notes were German;
   the translation lives in `docs/01-vision.md`.) Exception: in-game UI labels the user specified in
-  German ("Zuletzt", "16 Uhr", "Zu müde...").
+  German (none are shown any more since 2026-11-25; the keyboard has no labels).
 - The user has **little ML background**. Explain ML concepts in plain language, give a clear
   recommendation with pros/cons, and prefer approaches that can be shown in experiments over theory.
 - Concept work lives in `docs/`. Keep it current:

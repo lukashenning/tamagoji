@@ -131,26 +131,28 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .you .its { opacity: 0.35; }
 
-/* ── input panel: Zuletzt | hourly random set ── */
+/* ── input panel: recent emojis | hourly random set (no labels) ── */
+/* while it sleeps the keyboard slides down out of view and the stage grows into its place (main.js
+   animates the height); the keys stay anchored at the bottom, so it looks like sliding */
+.palette-wrap {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
 .phone { user-select: none; -webkit-user-select: none; }
 .palette {
   flex: none;
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px 18px;
+  padding: 14px 12px 18px;
   background: #f0f0f0;
   border-top: 1px solid #e6e6e6;
 }
 .palette.locked .em { opacity: 0.45; pointer-events: none; }
-.kb-title {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--dim);
-  padding: 0 2px 6px;
-  min-height: 20px;
-}
 .kb-grid {
   display: grid;
   grid-template-columns: repeat(4, 42px);
@@ -174,9 +176,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (hover: hover) {
   .em:hover { background: rgba(0, 0, 0, 0.06); }
 }
-.em.zz { cursor: default; opacity: 0.5; }
-.em.zz[data-zz] { cursor: pointer; }
-.em.zz:not([data-zz]):hover { background: none; }
 .em:active { transform: scale(0.88); }
 
 /* ── test panel ── */
@@ -326,3 +325,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: 14px;
 }
 .confirm-buttons .danger { background: #f7c8d0; border-color: #eeb0bc; font-weight: 600; }
+
+/* sleeping: clouds drift below it, more the more tired it is (moved by main.js) */
+.clouds { position: absolute; left: 50%; top: calc(100% + 30px); /* below the "sleeping" label */ width: 0; height: 0; pointer-events: none; }
+.cloud {
+  position: absolute;
+  left: -0.6em;
+  top: 0;
+  font-family: var(--emoji);
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 2.4s ease;
+  will-change: transform, opacity;
+}

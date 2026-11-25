@@ -94,9 +94,11 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
 - **Waking by itself**: once rested (100%), 1–4 s later (while the app is open).
 - When it **wakes up by itself**, it greets you with a **surprise** sign (from this hour's set).
   Woken by you, it waits for your sign.
-- **"Zu müde..."**: your sign wakes it only with an energy-based chance (never below 10%, 70% at 70%,
-  always at 100%). If it doesn't wake, the keyboard empties and **10 💤** appear on random keys. Tap
-  them all away (or wait until it wakes by itself) to get the keyboard back.
+- **While it sleeps** the keyboard slides away (the stage grows into its place) and slides back when it
+  wakes. Any tap or swipe on the stage wakes it, always as your ❓ (D76). Woken with little energy, it
+  soon nods off again by itself (the nod-off chance and idle time depend on energy).
+- **Sleep clouds**: ☁️ of different sizes and opacity drift slowly below it while it sleeps, up to 14
+  when it's empty, fewer as its energy comes back (one fades out at a time), none when nearly rested.
 
 ## Dreams
 

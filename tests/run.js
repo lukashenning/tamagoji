@@ -2,7 +2,7 @@
 //   /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc -m tests/run.js
 
 import { DEFAULT_PARAMS } from '../src/core/params.js';
-import { Mind, wakeChance } from '../src/core/mind.js';
+import { Mind } from '../src/core/mind.js';
 import { BIRTH, SLEEP, WAKE, YES, NO, ASK, SEP } from '../src/core/tokens.js';
 import { mulberry32 } from '../src/core/rng.js';
 import { ALL } from '../src/core/emojiIndex.js';
@@ -366,12 +366,6 @@ const top = (m) => m.expect().probs[0]?.[0] ?? null;
   const before = save.history.length;
   const removed = pruneHistory(save);
   check('pruning drops the oldest sessions, keeps birth', removed > 0 && save.history[0].tok === BIRTH && save.history[1].tok === WAKE && save.history.length === before - removed, `${before} → ${save.history.length} entries`);
-}
-
-// 17. waking it with a sign: never when exhausted, 70% at 70% energy, always when full
-{
-  const c = [0.05, 0.1, 0.4, 0.7, 0.9, 1].map((f) => wakeChance(f, P));
-  check('wake chance by energy', c[0] === 0 && c[1] === 0 && Math.abs(c[3] - 0.7) < 1e-9 && c[4] > 0.9 && c[5] === 1, ['5%', '10%', '40%', '70%', '90%', '100%'].map((l, i) => `${l} → ${pct(c[i])}`).join(' · '));
 }
 
 // 18. a random player (chaos) → no crashes
