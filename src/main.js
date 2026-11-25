@@ -3,9 +3,9 @@
 
 import { Mind, wakeChance } from './core/mind.js';
 import { ENGINE_VERSION } from './core/params.js';
-import { SLEEP, WAKE, BIRTH, NO, ASK, ELEMENTALS, isContent } from './core/tokens.js';
+import { SLEEP, WAKE, YES, NO, ASK, ELEMENTALS } from './core/tokens.js';
 import { recentEmojis, hourlySet, hourLabel } from './core/keyboard.js';
-import { voiceFor, ARCHETYPES } from './core/voice.js';
+import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
 import { playMelody, unlockAudio, setSound, soundOn } from './ui/sound.js';
@@ -98,8 +98,47 @@ function playerSend(tok) {
     append({ t: now, who: 'S', tok: WAKE, m: 'manual' });
   } else if (m.turn !== 'P') return;
   append({ t: s.clock.now(), who: 'P', tok });
+  if (ELEMENTALS.includes(tok)) playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
   s.replyAt = null;
   render();
+}
+
+// ── gestures on the stage ──
+// tap the creature = ✓ · tap anywhere around it = ❓ · swipe through it (left↔right) = ✗
+function gestures(stage, creature) {
+  let g = null;
+  const inside = (r, x, y) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    g = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), through: false, far: false };
+    stage.setPointerCapture?.(e.pointerId);
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!g) return;
+    const r = creature.getBoundingClientRect();
+    const cx = (r.left + r.right) / 2;
+    // did this stretch of the path cross its middle, at its height?
+    if ((g.x - cx) * (e.clientX - cx) <= 0 && g.x !== e.clientX) {
+      const y = g.y + ((cx - g.x) / (e.clientX - g.x)) * (e.clientY - g.y);
+      if (y >= r.top && y <= r.bottom) g.through = true;
+    }
+    g.x = e.clientX;
+    g.y = e.clientY;
+    if (Math.hypot(g.x - g.x0, g.y - g.y0) > 12) g.far = true;
+  });
+  const end = (e) => {
+    if (!g) return;
+    const d = g;
+    g = null;
+    if (e.type === 'pointercancel') return;
+    const r = creature.getBoundingClientRect();
+    const dx = e.clientX - d.x0;
+    const dy = e.clientY - d.y0;
+    if (!d.far && performance.now() - d.t0 < 700) playerSend(inside(r, d.x0, d.y0) ? YES : ASK);
+    else if (d.through && Math.abs(dx) > Math.max(40, 1.5 * Math.abs(dy))) playerSend(NO);
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
 }
 
 // ── time loop ──
@@ -157,58 +196,61 @@ function lastEntry(who) {
   return null;
 }
 
-/** What the bottom-right indicator shows for your last input. After your ✗ (also several in a row)
- * it keeps showing your last real sign before it, until you send something other than ✗. */
-function yourIndicator() {
+/** The bottom-right row: the real signs of the current exchange, yours and its (its dimmer), since
+ * your last ✓ ✗ ❓ (they break the sequence; its own don't clear the row). Starts fresh after sleep. */
+const ROW_MAX = 6;
+function exchangeRow() {
   const h = s.save.history;
-  let afterNo = false;
-  for (let i = h.length - 1; i >= 0; i--) {
+  const row = [];
+  for (let i = h.length - 1; i >= 0 && row.length < ROW_MAX; i--) {
     const e = h[i];
-    if (e.tok === SLEEP || e.tok === WAKE || e.tok === BIRTH) break;
-    if (e.who !== 'P') continue;
-    if (!afterNo && e.tok !== NO) return e.tok; // your last input wasn't ✗: show it
-    afterNo = true;
-    if (!ELEMENTALS.includes(e.tok)) return e.tok; // your last real sign before the ✗
+    if (e.who === 'S') break;
+    if (ELEMENTALS.includes(e.tok)) {
+      if (e.who === 'P') break;
+      continue;
+    }
+    if (!s.mind.takenBack.has(i)) row.unshift(e);
   }
-  return afterNo ? NO : '';
+  return row;
 }
 
-// dreaming: each new dream emoji rises straight up from its head, growing as it goes.
-// Rising speed follows the pace of the dreams: the shorter the time between dream emojis, the faster
-// all of them rise (and they slow down again when the dreams come slower), so about 3 are visible.
+let rowKey = '';
+function renderRow(row) {
+  const key = row.map((e) => e.who + e.tok).join('');
+  if (key === rowKey) return;
+  rowKey = key;
+  el.you.replaceChildren(
+    ...row.map((e) => {
+      const n = document.createElement('span');
+      n.className = e.who === 'C' ? 'its' : 'yours';
+      n.textContent = e.tok;
+      return n;
+    }),
+  );
+}
+
+// dreaming: dream emojis rise straight up from its head, growing as they go. They come out at the
+// normal (1×) dream pace, one every dreamIntervalSec real seconds, also when time runs faster: then
+// each one shows the dream emoji of that moment (the dream itself is not affected).
 let dreamSpawned = -1;
 let lastSpawn = 0;
-let dreamGap = 3000; // smoothed real ms between dream emojis
-const flying = []; // { node, start (progress clock at spawn) }
+const flying = []; // { node, born (real ms) }
 const RISE_PX = 200;
-
-// a shared "progress clock": how far (in whole rises) everything has moved. Its speed follows the
-// dream pace, so all dream emojis speed up or slow down together, at any frame rate.
-let progress = 0;
-let progressAt = performance.now();
-function advance() {
-  const now = performance.now();
-  const gap = Math.max(dreamGap, Date.now() - lastSpawn); // no new dream for a while → slower
-  const riseMs = Math.min(30000, Math.max(1500, 3 * gap)); // about 3 visible at a time
-  progress += Math.min(3000, now - progressAt) / riseMs;
-  progressAt = now;
-}
+const riseMs = () => 3 * s.params.dreamIntervalSec * 1000; // about 3 visible at a time
 
 function showDream(m) {
   if (s.dreamShown < dreamSpawned) dreamSpawned = -1; // a new sleep
-  if (s.dreamShown <= dreamSpawned || Date.now() - lastSpawn < 900) return; // catching up: not too dense
+  const t = performance.now();
+  if (s.dreamShown <= dreamSpawned || t - lastSpawn < 0.95 * s.params.dreamIntervalSec * 1000) return;
   const tok = m.sleep.dream[s.dreamShown];
   dreamSpawned = s.dreamShown;
   if (!tok) return;
-  advance();
-  const t = Date.now();
-  if (lastSpawn && t - lastSpawn < 60000) dreamGap = 0.6 * dreamGap + 0.4 * (t - lastSpawn);
   lastSpawn = t;
   const node = document.createElement('span');
   node.className = 'dream-emoji';
   node.textContent = tok;
   el.dreams.append(node);
-  flying.push({ node, start: progress });
+  flying.push({ node, born: t });
 }
 
 function clearDreams() {
@@ -217,10 +259,10 @@ function clearDreams() {
 }
 
 function animateDreams() {
-  advance();
+  const now = performance.now();
   for (let i = flying.length - 1; i >= 0; i--) {
     const f = flying[i];
-    const p = progress - f.start; // 0…1 of the way up
+    const p = (now - f.born) / riseMs(); // 0…1 of the way up
     if (p >= 1) {
       f.node.remove();
       flying.splice(i, 1);
@@ -244,7 +286,7 @@ function render() {
     el.bubbleMark.textContent = '';
     el.label.textContent = 'sleeping';
     showDream(m);
-    el.you.textContent = '';
+    renderRow([]);
   } else {
     if (flying.length) clearDreams(); // woke up: dreams vanish
     const c = lastEntry('C');
@@ -252,7 +294,7 @@ function render() {
     el.bubbleEmoji.textContent = c ? c.tok : '';
     el.bubbleMark.textContent = '';
     el.label.textContent = m.label();
-    el.you.textContent = yourIndicator();
+    renderRow(exchangeRow());
   }
 
   // keyboard: "Zuletzt" (pinned signs + most recent emojis) | the hour's random set ("16 Uhr")
@@ -343,6 +385,7 @@ const palette = buildPalette(document.getElementById('palette'), {
     render();
   },
 });
+gestures(document.querySelector('.stage'), el.creature);
 const updatePanel = buildPanel(document.getElementById('panel'), handlers);
 load(loadCreature() || newCreature(Date.now(), s.params));
 setInterval(tick, 100);

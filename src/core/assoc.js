@@ -48,6 +48,17 @@ export class Assoc {
     }
   }
 
+  /** Add `amount` to "after ctx comes sign" on level ctx.length only. */
+  addAt(ctx, sign, amount) {
+    if (!amount || !ctx.length || ctx.length > this.p.levels) return;
+    this.version++;
+    const k = this.key(ctx, ctx.length);
+    let row = this.table.get(k);
+    if (!row) this.table.set(k, (row = new Map()));
+    const e = row.get(sign);
+    row.set(sign, { w: (e ? this.eff(e) : 0) + amount, c: this.clock });
+  }
+
   /** The links of each level for this context: [{ L, ctx, weight, links: [[sign, w]] }]. */
   levelsFor(ctx) {
     const out = [];

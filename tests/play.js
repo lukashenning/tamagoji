@@ -9,6 +9,7 @@ import { mulberry32 } from '../src/core/rng.js';
 import { hourlySet } from '../src/core/keyboard.js';
 import { makeCharacter } from '../src/core/emojiIndex.js';
 import { rngFor } from '../src/core/rng.js';
+import { player } from './player.js';
 
 const log = globalThis.print || console.log;
 const P = { ...DEFAULT_PARAMS };
@@ -23,32 +24,6 @@ const flag = (rule, example) => {
 };
 const stats = { steps: 0, creature: {}, reactYes: [0, 0], reactNo: [0, 0], takenBack: 0, sleeps: 0, chains: 0 };
 const bump = (k) => (stats.creature[k] = (stats.creature[k] || 0) + 1);
-
-// The player: speaks a small language (a few chains), answers its signs with ✓ when it continued a
-// chain, ✗ when it didn't, sometimes waits with ☐, sometimes says something random.
-const LANG = [
-  ['🐶', '🌞', '🦴', '🎾'],
-  ['🍕', '🚗', '🌙'],
-  ['🎈', '🐟', '🦄', '⭐', '🍎'],
-];
-function player(rng, m, last) {
-  const r = rng();
-  const prev = m.seq[m.seq.length - 1]?.tok;
-  const prev2 = m.seq[m.seq.length - 2]?.tok;
-  if (last && last.who === 'C' && !isElemental(last.tok)) {
-    // judge its sign: did it continue a chain correctly?
-    const ok = LANG.some((c) => c.some((x, i) => i > 0 && x === last.tok && c[i - 1] === prev2));
-    if (r < 0.25) return ok ? YES : NO;
-  }
-  if (r < 0.4) return ASK;
-  if (r < 0.45) return ['🧊', '🎻', '🌵', '🪁', '🥐'][Math.floor(rng() * 5)];
-  // continue a chain from the last real sign, or start one
-  for (const c of LANG) {
-    const i = c.indexOf(prev);
-    if (i >= 0 && i < c.length - 1) return c[i + 1];
-  }
-  return LANG[Math.floor(rng() * LANG.length)][0];
-}
 
 function play(seed, steps) {
   const rng = mulberry32(seed * 7919);

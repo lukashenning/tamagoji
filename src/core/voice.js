@@ -8,6 +8,10 @@ import { hashString } from './rng.js';
 
 export const DEFAULT_VOICE = { rich: 0.2, struck: 0.7, metal: 0.1, length: 0.8, hollow: 0, glide: 0.06, breath: 0, wobble: 0, chorus: 0 };
 
+// your ✓ ✗ ❓ (played an octave lower): a steady, soft, hollow held tone, no glide or vibrato, the
+// same for every creature, so it never sounds like one
+export const PLAYER_VOICE = { rich: 0.4, struck: 0, metal: 0, length: 0.95, hollow: 1, glide: 0, breath: 0.15, wobble: 0, chorus: 0.5 };
+
 // where familiar instruments sit in the space (for the panel label and the "▶ archetypes" button)
 export const ARCHETYPES = {
   whistle: { rich: 0, struck: 0.1, metal: 0, hollow: 0, breath: 0 },

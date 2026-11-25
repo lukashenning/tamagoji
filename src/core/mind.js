@@ -401,6 +401,23 @@ export class Mind {
     return out;
   }
 
+  /**
+   * Proximity in the dream (D70): besides "what came before" (learned above), each dreamed sign D is
+   * also linked, more weakly, to its neighbours the other way round. In C A B D E S: after E comes D
+   * (one after), after S E comes D (two after, read backwards) and after B E comes D (around it).
+   * So A → B also teaches a little B → A. Never a sign to itself (that would teach repetition).
+   */
+  learnProximity(dream) {
+    const w = this.p.proximityWeight;
+    if (!w) return;
+    dream.forEach((d, i) => {
+      const [b, e, f] = [dream[i - 1], dream[i + 1], dream[i + 2]];
+      if (e && e !== d) this.assoc.addAt([e], d, w);
+      if (e && f && e !== d && f !== d) this.assoc.addAt([f, e], d, w);
+      if (b && e && b !== d && e !== d) this.assoc.addAt([b, e], d, w);
+    });
+  }
+
   isRested(now) {
     return !!this.sleep && now >= this.sleep.restedAt;
   }
@@ -429,6 +446,7 @@ export class Mind {
         this.assoc.add(this.context(list), tok, this.p.dreamWeight, this.chainLevels(list, list.length, cut));
         list.push({ tok, cutBefore: cut });
       });
+      this.learnProximity(s.dream.slice(0, n));
       this.stats.dreamLearned = n;
       this.energy = this.energyAt(t);
       this.updateSeats(); // its look changes (if at all) while it sleeps

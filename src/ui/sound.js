@@ -140,16 +140,16 @@ function playNote(ac, out, freq, t, step, v, volume) {
 }
 
 /**
- * Play the melody of `tok` (only the creature's signs play) in the creature's voice (src/core/voice.js).
- * `volume` 0…1.
+ * Play the melody of `tok` in a voice (src/core/voice.js): the creature's signs in its voice, your
+ * ✓ ✗ ❓ in PLAYER_VOICE an octave lower. `volume` 0…1, `octave` shifts by whole octaves.
  */
-export function playMelody(tok, voice = DEFAULT_VOICE, volume = 1) {
+export function playMelody(tok, voice = DEFAULT_VOICE, volume = 1, octave = 0) {
   if (!enabled) return;
   const ac = audio();
   if (!ac) return;
   const step = MELODY_MS / MELODY_STEPS / 1000;
   const t0 = ac.currentTime + 0.02;
   melodyFor(tok).forEach((freq, i) => {
-    if (freq) playNote(ac, ac.destination, freq, t0 + i * step, step, voice, volume);
+    if (freq) playNote(ac, ac.destination, freq * Math.pow(2, octave), t0 + i * step, step, voice, volume);
   });
 }

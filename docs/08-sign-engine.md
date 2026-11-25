@@ -104,6 +104,27 @@ It answers itself with the same rules (votes, repetition surprise), without ✓ 
 dreamed signs it got to are learned at **+0.1** each (sleep consolidates). Dreams don't count as
 its outputs.
 
+**Proximity (D70).** Dreams also link each sign to its neighbours the other way round, at **+0.04**
+(`proximityWeight`, slider). In the dream C A B D E S G D, the D after B gets, besides the usual
+B → D and A B → D: after E comes D (one after), after S E comes D (two after, read backwards) and
+after B E comes D (around it). Never a sign to itself. So repeated A → B also teaches a little B → A.
+Check: `jsc -m tests/proximity.js` (40 creatures × 1500 steps per weight). At 0.04 its top choice
+after a learned chain is unchanged (98%), the next sign after the chain is expected 94% (was 98%),
+and after a single chain sign the previous one is now expected 18% (was 0%), as its top choice 6%.
+At 0.1 the sequence learning starts to suffer (next after one sign 68%, was 96%).
+
+The dream emojis rising above it come out at the 1× dream pace (one per 3 real seconds, rising in
+9 s), also when time runs faster; then each shows the dream sign of that moment.
+
+## Your side: the corner row and gestures
+
+Bottom right: the real signs of the current exchange, yours and its (its dimmer), since your last
+✓ ✗ ❓; its own specials don't clear the row; it starts fresh after sleep. At most the last 6.
+
+On the stage: **tap the creature = ✓**, **tap around it = ❓**, **swipe through it (left ↔ right) = ✗**.
+Your ✓ ✗ ❓ (also from the keyboard) play their melodies an octave below its voice, in one steady,
+soft, hollow sound of your own (`PLAYER_VOICE`).
+
 ## Top 6 → seats → look and voice
 
 - Its signs are ranked by how often it used them in its **last 1000 outputs** (awake real signs,

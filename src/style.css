@@ -59,6 +59,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   align-items: center;
   justify-content: center;
   gap: 14px;
+  touch-action: pan-y; /* horizontal swipes reach the page (✗ = swipe through the creature) */
+  cursor: pointer;
 }
 .creature {
   --size: 110px;
@@ -106,14 +108,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
   will-change: transform, opacity;
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
+/* bottom right: the current exchange (your signs, its signs dimmer) since your last ✓ ✗ ❓ */
 .you {
   position: absolute;
   right: 22px;
   bottom: 16px;
-  font: 28px/1 var(--emoji);
-  color: var(--dim);
-  opacity: 0.8;
+  display: flex;
+  gap: 3px;
+  font: 24px/1 var(--emoji);
+  pointer-events: none;
 }
+.you .its { opacity: 0.35; }
 
 /* ── input panel: Zuletzt | hourly random set ── */
 .phone { user-select: none; -webkit-user-select: none; }

@@ -45,6 +45,7 @@ export const DEFAULT_PARAMS = {
   fullRecoveryMin: 60, // empty → full; energy recovers steadily while sleeping
   dreamIntervalSec: 3, // one dream sign every few seconds
   dreamWeight: 0.1, // each dreamed sign is learned this much on waking
+  proximityWeight: 0.04, // dreams also link each sign to its neighbours the other way round (D70)
   wakeDelaySec: [1, 4], // rested (100%): wakes by itself this many seconds later
   replyDelaySec: [0.6, 1.5],
 
@@ -73,5 +74,6 @@ export const SLIDERS = [
   { key: 'surpriseBase', label: 'base surprise', min: 0, max: 0.5, step: 0.01 },
   { key: 'repeatSurprise', label: 'surprise when repetitive', min: 0, max: 0.8, step: 0.01 },
   { key: 'dreamWeight', label: 'dream learning', min: 0, max: 0.5, step: 0.05 },
+  { key: 'proximityWeight', label: 'dream proximity learning', min: 0, max: 0.2, step: 0.01 },
   { key: 'decayPerTurn', label: 'fading (towards 0 per turn)', min: 0, max: 0.1, step: 0.005 },
 ];
