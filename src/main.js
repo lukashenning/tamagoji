@@ -112,8 +112,12 @@ function flash(tok) {
   const node = document.getElementById('flash');
   const [color, peak] = FLASH[tok];
   node.style.background = color;
-  // on at once, then a long, soft fade (~2.2 s, fast at first, then lingering)
-  node.animate([{ opacity: peak, easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)' }, { opacity: 0 }], { duration: 2200 });
+  // full colour at once (no fade-in), held a moment, then a slow, even fade (~3.5 s in all)
+  node.getAnimations().forEach((a) => a.cancel());
+  node.animate(
+    [{ opacity: peak }, { opacity: peak, offset: 0.06, easing: 'cubic-bezier(0.25, 0.1, 0.5, 1)' }, { opacity: 0 }],
+    { duration: 3500 },
+  );
 }
 
 // ── gestures on the stage ──
