@@ -327,7 +327,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .confirm-buttons .danger { background: #f7c8d0; border-color: #eeb0bc; font-weight: 600; }
 
 /* sleeping: clouds drift below it, more the more tired it is (moved by main.js) */
-.clouds { position: absolute; left: 50%; top: calc(100% + 30px); /* below the "sleeping" label */ width: 0; height: 0; pointer-events: none; }
+.clouds { position: absolute; left: 50%; top: calc(100% - 6px); /* from just below it down over the lower area */ width: 0; height: 0; pointer-events: none; }
 .cloud {
   position: absolute;
   left: -0.6em;

@@ -318,7 +318,7 @@ function render() {
     el.bubble.className = 'bubble empty';
     el.bubbleEmoji.textContent = '';
     el.bubbleMark.textContent = '';
-    el.label.textContent = 'sleeping';
+    el.label.textContent = ''; // the clouds show it's sleeping
     showDream(m);
     renderRow([]);
   } else {
@@ -370,10 +370,10 @@ function sleepClouds(tiredness) {
     const node = document.createElement('span');
     node.className = 'cloud';
     node.textContent = '☁️';
-    const size = 16 + Math.random() * 30;
+    const size = 34 + Math.random() * 56; // 34–90 px
     node.style.fontSize = size.toFixed(0) + 'px';
     node.style.zIndex = String(Math.round(size)); // bigger ones in front
-    const c = { node, x: (Math.random() - 0.5) * 190, y: Math.random() * 46, amp: 8 + Math.random() * 18, period: 9000 + Math.random() * 12000, phase: Math.random() * 6.3, alpha: 0.25 + Math.random() * 0.5, leaving: false };
+    const c = { node, x: (Math.random() - 0.5) * 300, y: Math.random() * 140, amp: 10 + Math.random() * 22, period: 9000 + Math.random() * 12000, phase: Math.random() * 6.3, alpha: 0.25 + Math.random() * 0.5, leaving: false };
     cloudBox.append(node);
     clouds.push(c);
     requestAnimationFrame(() => (node.style.opacity = c.alpha.toFixed(2))); // fade in
