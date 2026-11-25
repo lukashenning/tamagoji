@@ -102,7 +102,7 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
   soon nods off again by itself (the nod-off chance and idle time depend on energy).
 - **Sleep clouds**: ☁️ of different sizes (44–140 px) and opacity float slowly across the stage from
   right to left (born outside on the right, gone outside on the left; ~10 px/s, bigger ones a bit
-  faster), over its whole height, some behind the creature and some (fainter) in front of it. How
+  faster), mostly in the lower part (denser towards the bottom, never up at the logo), some behind the creature and some (fainter) in front of it. How
   many: 6 at full energy up to 34 (a dense tapestry) when it's empty, smoothly in between, so they thin
   out as it recovers. When it falls asleep the sky fills at once; when it wakes they fade away.
 

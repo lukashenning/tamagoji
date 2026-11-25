@@ -402,8 +402,10 @@ function addCloud(x) {
   node.style.zIndex = String(Math.round(size));
   node.style.opacity = (front ? 0.22 + Math.random() * 0.3 : 0.35 + Math.random() * 0.45).toFixed(2);
   const H = el.stageHeight();
-  // anywhere from the top to the bottom of the stage (partly cut off at the edges is fine)
-  const c = { node, x, y: Math.random() * H - size / 2, w: size * 1.3, speed: 5 + size * 0.07, leaving: false };
+  // mostly in the lower part of the stage, below the creature, down to the bottom edge (cut off there
+  // is fine); never so high that they touch the logo
+  const centre = H * (0.28 + 0.74 * Math.sqrt(Math.random())); // denser towards the bottom
+  const c = { node, x, y: Math.max(H * 0.1, centre - size / 2), w: size * 1.3, speed: 5 + size * 0.07, leaving: false };
   (front ? cloudFront : cloudBack).append(node);
   clouds.push(c);
   lastCloudBirth = performance.now();
