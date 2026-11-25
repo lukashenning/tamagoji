@@ -483,6 +483,8 @@ muteBtn.addEventListener('click', (e) => {
 });
 
 // ── start ──
+// always the newest files (see sw.js); also lets the game start without a connection
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 const look = buildCreature(el.creature);
 s.styleCount = look.styleCount;
 const palette = buildPalette(document.getElementById('palette'), {

@@ -95,7 +95,6 @@ export function buildCreature(root) {
         g.fill(pathOf(part, style, variant), 'evenodd');
         g.setTransform(1, 0, 0, 1, 0, 0);
       } else drawPlaceholder(g, part, variant, color);
-      l.wrap.title = `${part}: ${seat.tok} · style ${style + 1} · variant ${variant}`;
     });
   }
 

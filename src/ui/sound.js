@@ -31,13 +31,31 @@ function audio() {
     if (!AC) return null;
     ctx = new AC();
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state !== 'running') ctx.resume(); // 'suspended', or 'interrupted' on iPhone
   return ctx;
 }
 
 /** Call from a click handler once, so later melodies (e.g. the creature's) are allowed to play. */
+let unlocked = false;
 export function unlockAudio() {
-  audio();
+  const ac = audio();
+  if (!ac || unlocked) return;
+  // iPhone: sound only starts after the audio is switched on inside a touch; playing a tiny silent
+  // sound right then makes sure it is really on
+  const src = ac.createBufferSource();
+  src.buffer = ac.createBuffer(1, 1, 22050);
+  src.connect(ac.destination);
+  src.start(0);
+  if (ac.state === 'running') unlocked = true;
+}
+
+// switch the audio on at the very first touch, anywhere (not only when a sign is sent), and again
+// when the app comes back to the screen (iPhone pauses it in the background)
+if (typeof window !== 'undefined') {
+  for (const type of ['pointerdown', 'touchend', 'click', 'keydown']) window.addEventListener(type, unlockAudio, { capture: true, passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && ctx && ctx.state !== 'running') ctx.resume();
+  });
 }
 
 function noiseBuffer(ac) {
