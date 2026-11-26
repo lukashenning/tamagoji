@@ -174,14 +174,11 @@ function tick() {
 // ── game view ──
 const el = {
   creature: document.getElementById('creature'),
-  bubble: document.getElementById('bubble'),
-  bubbleEmoji: document.getElementById('bubble-emoji'),
-  bubbleMark: document.getElementById('bubble-mark'),
+  signs: document.getElementById('signs'),
   dreams: document.getElementById('dreams'),
   label: document.getElementById('label'),
   stageWidth: () => document.querySelector('.stage').clientWidth,
   stageHeight: () => document.querySelector('.stage').clientHeight,
-  you: document.getElementById('you'),
 };
 
 function lastEntry(who) {
@@ -203,7 +200,7 @@ const ROW_MAX = 5;
 const real = (e) => e.who !== 'S' && !ELEMENTALS.includes(e.tok);
 const boundary = (e) => e.who === 'S' && e.tok !== ENERGY; // sleep, wake, birth end an exchange (setting energy doesn't)
 
-/** The row as it stands just before history index `end`. */
+/** The row's history indices as they stand just before history index `end`. */
 function rowBefore(h, end) {
   const row = [];
   for (let i = end - 1; i >= 0 && row.length < ROW_MAX; i--) {
@@ -213,22 +210,30 @@ function rowBefore(h, end) {
       if (e.who === 'P' && e.tok !== ASK) break;
       continue;
     }
-    if (!s.mind.takenBack.has(i)) row.unshift(e);
+    if (!s.mind.takenBack.has(i)) row.unshift(i);
   }
   return row;
 }
 
+/**
+ * The sign row above its head (history indices, oldest first): the real signs of the current exchange,
+ * yours and its, since your last ✓ or ✗ (your ❓ and its own ✓ ✗ ❓ don't clear it). While you answer
+ * with ✗ it keeps what came before the sign your first ✗ rejected, plus its newest try. The very latest
+ * sign, if it is a ✓ ✗ ❓ (yours or its), is shown at the end until the next sign. Starts fresh after sleep.
+ */
 function exchangeRow() {
   const h = s.save.history;
+  const tail = h.length - 1;
+  const withLast = (row) => (tail >= 0 && ELEMENTALS.includes(h[tail].tok) && !row.includes(tail) ? [...row, tail] : row).slice(-ROW_MAX);
   // your latest answer (❓ doesn't count): only a ✗ keeps the context
   let last = -1;
-  for (let i = h.length - 1; i >= 0 && !boundary(h[i]); i--) {
+  for (let i = tail; i >= 0 && !boundary(h[i]); i--) {
     if (h[i].who === 'P' && h[i].tok !== ASK) {
       last = i;
       break;
     }
   }
-  if (last < 0 || h[last].tok !== NO) return rowBefore(h, h.length);
+  if (last < 0 || h[last].tok !== NO) return withLast(rowBefore(h, h.length));
   // the first ✗ of your run of ✗ (❓ in between allowed), and the sign it rejected
   let first = last;
   for (let i = last - 1; i >= 0 && !boundary(h[i]); i--) {
@@ -238,25 +243,44 @@ function exchangeRow() {
   }
   let rejected = first - 1;
   while (rejected >= 0 && !boundary(h[rejected]) && !real(h[rejected])) rejected--;
-  if (rejected < 0 || boundary(h[rejected])) return rowBefore(h, h.length);
+  if (rejected < 0 || boundary(h[rejected])) return withLast(rowBefore(h, h.length));
   // what came before it, plus its newest try after your latest ✗
-  const tries = h.slice(last + 1).filter(real);
-  return [...rowBefore(h, rejected), ...tries].slice(-ROW_MAX);
+  const tries = [];
+  for (let i = last + 1; i <= tail; i++) if (real(h[i])) tries.push(i);
+  return withLast([...rowBefore(h, rejected), ...tries]);
 }
 
-let rowKey = '';
-function renderRow(row) {
-  const key = row.map((e) => e.who + e.tok).join('');
-  if (key === rowKey) return;
-  rowKey = key;
-  el.you.replaceChildren(
-    ...row.map((e) => {
-      const n = document.createElement('span');
-      n.className = e.who === 'C' ? 'its' : 'yours';
-      n.textContent = e.tok;
-      return n;
-    }),
-  );
+// the row is drawn above its head: the newest sign in the middle (right above the head), older ones to
+// its left. A new sign slides in from the right and pushes the others left. Its signs are fully
+// visible, yours at half strength.
+const SLOT = 74; // px from one sign to the next
+const shownSigns = new Map(); // history index -> node
+function renderSigns(row) {
+  const h = s.save.history;
+  const want = new Set(row);
+  for (const [i, node] of shownSigns)
+    if (!want.has(i)) {
+      shownSigns.delete(i);
+      node.style.opacity = '0';
+      setTimeout(() => node.remove(), 450);
+    }
+  row.forEach((i, k) => {
+    const x = -(row.length - 1 - k) * SLOT;
+    const alpha = h[i].who === 'C' ? '1' : '0.5';
+    let node = shownSigns.get(i);
+    if (!node) {
+      node = document.createElement('span');
+      node.className = 'sign';
+      node.textContent = h[i].tok;
+      node.style.transform = `translateX(${x + SLOT}px)`; // comes in from the right
+      node.style.opacity = '0';
+      el.signs.append(node);
+      shownSigns.set(i, node);
+      node.getBoundingClientRect(); // start the slide from there
+    }
+    node.style.transform = `translateX(${x}px)`;
+    node.style.opacity = alpha;
+  });
 }
 
 // dreaming: dream emojis rise straight up from its head, growing as they go. They come out at the
@@ -316,20 +340,13 @@ function render() {
   look.render({ seats: m.seats, pose: m.pose, level: m.shownLevel(), spot: m.objectSpot });
 
   if (!m.awake && m.sleep) {
-    el.bubble.className = 'bubble empty';
-    el.bubbleEmoji.textContent = '';
-    el.bubbleMark.textContent = '';
     el.label.textContent = ''; // the clouds show it's sleeping
     showDream(m);
-    renderRow([]);
+    renderSigns([]);
   } else {
     if (flying.length) clearDreams(); // woke up: dreams vanish
-    const c = lastEntry('C');
-    el.bubble.className = 'bubble' + (m.turn === 'C' ? ' faded' : '') + (c ? '' : ' empty');
-    el.bubbleEmoji.textContent = c ? c.tok : '';
-    el.bubbleMark.textContent = '';
     el.label.textContent = m.label();
-    renderRow(exchangeRow());
+    renderSigns(exchangeRow());
   }
 
   muteBtn.hidden = m.awake; // the dream mute button only while it sleeps
@@ -346,12 +363,16 @@ function render() {
 
 // the keyboard slides down out of view (the stage grows into its place) and back up
 const kbWrap = document.getElementById('palette-wrap');
+// only the end of its own height slide counts (the keys' own little fades end earlier and bubble up)
+kbWrap.addEventListener('transitionend', (e) => {
+  if (e.target === kbWrap && e.propertyName === 'height' && kbShown) kbWrap.style.height = '';
+});
 let kbShown = null;
 function slideKeyboard(show) {
   if (show === kbShown) return;
   const first = kbShown === null;
   kbShown = show;
-  const full = kbWrap.firstElementChild.offsetHeight;
+  const full = kbWrap.firstElementChild.getBoundingClientRect().height; // exact (no rounding: no snap at the end)
   if (first) {
     kbWrap.style.height = show ? '' : '0px';
     return;
@@ -359,7 +380,7 @@ function slideKeyboard(show) {
   kbWrap.style.height = (show ? 0 : full) + 'px';
   kbWrap.offsetHeight; // start the transition from here
   kbWrap.style.height = (show ? full : 0) + 'px';
-  if (show) kbWrap.addEventListener('transitionend', () => kbShown && (kbWrap.style.height = ''), { once: true });
+  // (when it has fully slid in it goes back to its natural height; see the listener below)
 }
 
 // clouds float slowly across the stage from right to left (born outside on the right, gone outside

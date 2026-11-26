@@ -140,10 +140,13 @@ off at once (when you wake it: the moment your finger touches the stage), fallin
 
 ## Your side: the corner row and gestures
 
-Bottom left (growing to the right): the real signs of the current exchange, yours and its (its dimmer), since your last
-✓ or ✗; your ❓ and its own specials don't clear the row (display only: for learning, ❓ still cuts chains); while you
-answer with ✗ (also several times), it keeps showing what came before the sign your first ✗ rejected,
-plus its newest try, until you send something other than ✗ (the "not that, this" context); it starts fresh after sleep. At most the last 5.
+**The sign row above its head** (D101; replaces the speech bubble and the small row bottom left): the
+real signs of the current exchange, yours and its, the newest right above its head, older ones to its
+left. A new sign slides in from the right and pushes the others left. Its signs are fully visible,
+yours at half strength. The row clears with your ✓ or ✗ (your ❓ and its own ✓ ✗ ❓ don't clear it);
+while you answer with ✗ (also several times) it keeps what came before the sign your first ✗ rejected,
+plus its newest try (the "not that, this" context). The very latest sign, if it is a ✓ ✗ ❓ (yours or
+its), shows at the end until the next sign. At most 5; it starts fresh after sleep.
 
 ✓ ✗ ❓ are not on the keyboard (both halves are 16 emojis); you give them only with gestures.
 On the stage: **tap the creature = ✓** (from its hat down to just above its legs: the middle 40% across, 4–66%

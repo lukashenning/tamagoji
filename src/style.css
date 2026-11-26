@@ -109,25 +109,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 50%;
   transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1), top 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.bubble {
+/* the sign row above its head: the newest sign right above the head, older ones to its left (moved
+   by main.js: they slide in from the right); its signs fully visible, yours at half strength */
+.signs {
   position: relative;
-  min-width: 84px;
+  width: 100%;
   height: 84px;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: 52px/1 var(--emoji);
-  transition: opacity 0.3s;
+  flex: none;
 }
-.bubble.empty { opacity: 0; }
-.bubble.faded { opacity: 0.35; }
-#bubble-mark {
+.signs .sign {
   position: absolute;
-  right: -10px;
-  top: -12px;
-  font: 600 18px/1 ui-sans-serif, system-ui;
-  color: var(--accent);
+  left: 50%;
+  top: 0;
+  width: 74px;
+  margin-left: -37px;
+  font: 52px/84px var(--emoji);
+  text-align: center;
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.3, 1), opacity 0.45s ease;
+  will-change: transform, opacity;
 }
 /* dreams: little emojis rise straight up from its head (moved by main.js) */
 .creature-wrap { position: relative; }
@@ -141,18 +141,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   will-change: transform, opacity;
 }
 .label { height: 18px; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
-/* bottom left, growing to the right: the current exchange (your signs, its signs dimmer) since your last ✓ or ✗ */
-.you {
-  position: absolute;
-  left: 22px;
-  bottom: 16px;
-  display: flex;
-  gap: 3px;
-  font: 24px/1 var(--emoji);
-  pointer-events: none;
-}
-.you .its { opacity: 0.35; }
-
 /* ── input panel: recent emojis | hourly random set (no labels) ── */
 /* while it sleeps the keyboard slides down out of view and the stage grows into its place (main.js
    animates the height); the keys stay anchored at the bottom, so it looks like sliding */
