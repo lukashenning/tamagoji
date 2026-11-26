@@ -197,3 +197,30 @@ the history like everything else. Not used for anything else yet.
 
 Complexity score, ❓-streak rules, special retry rule, loop avoidance,
 pattern strength rankings (all `main`, docs/07). Growth measurement comes later.
+
+## Mic mode (D108)
+
+Tap the logo → menu: **Mic** · **New creature** (asks first). **Mic** turns the keyboard area into a
+small live picture of the microphone (a soft line for loudness, dots for the notes it hears) with a
+**Mic** switch at its top left; switching it off brings the keyboard back. Leaving the app ends mic
+mode.
+
+- **Listening** (`src/core/hearing.js`): every ~10 ms the last ~21 ms of sound get a pitch (YIN), snapped
+  to the nearest of the melodies' pitches. When sound rises after a quiet moment, the next 5 steps
+  (100 ms each) are read: each step's note is the median pitch of its later part (after a note's start
+  has settled), or a pause; an unsteady step drops the melody. If the 5 steps are exactly some sign's
+  melody (also your ✓ ✗ ❓ an octave lower), that sign is entered **exactly like keyboard input** (no
+  mark in the history), but silently (your ✓ ✗ ❓ melody isn't played back).
+- **Unique melodies:** no two signs share a melody and any two differ in at least 2 of the 5 steps
+  (except the fixed ✅ / ❌, whose last notes are an octave apart), so one misheard note gives nothing
+  rather than a wrong sign (`src/core/melody.js`). This changed every emoji's melody.
+- It **doesn't hear itself**: while this device plays a melody (and ~0.45 s after), the microphone is
+  ignored. Heard signs are ignored while it sleeps or while it is about to answer.
+- **Calling out:** in mic mode, after 5–10 s with nothing said, it says ❓, so creatures nearby hear it
+  and answer; two devices in mic mode keep a dialogue going by themselves.
+- The bell-like shimmer of voices is now only in the strike of a note (~12 ms), so pitches are clear.
+- Offline check: `jsc -m tests/hearing.js` (melodies synthesised in 10 voices, in a simulated room with
+  echo and noise): 92–100% recognised, at most 1% wrong signs.
+- The microphone needs a secure page: it works on the live site (https) and on `localhost`, not on the
+  local network address (http://192.168.…). On iPhone, Safari is asked to keep playing through the
+  loudspeaker while the microphone is on (`navigator.audioSession`).

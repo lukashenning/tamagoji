@@ -368,3 +368,37 @@ button { font: inherit; color: inherit; cursor: pointer; }
   line-height: 1;
   will-change: transform;
 }
+
+/* ── menu (tap the logo) ── */
+.menu-card { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+.menu-card button {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 15px;
+}
+
+/* ── mic mode: the keyboard area shows the microphone instead of the keys ── */
+.kb-inner { position: relative; }
+.kb-inner.mic .palette { visibility: hidden; }
+.mic-panel {
+  position: absolute;
+  inset: 0;
+  background: #f0f0f0;
+  border-top: 1px solid #e6e6e6;
+  --mic-line: #b8b4bc;
+  --mic-dot: #b5838d;
+}
+.mic-panel[hidden] { display: none; }
+.mic-view { position: absolute; left: 16px; right: 16px; top: 44px; bottom: 18px; width: calc(100% - 32px); height: calc(100% - 62px); }
+.mic-switch { position: absolute; top: 12px; left: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
+.mic-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.mic-switch .track { width: 34px; height: 20px; border-radius: 10px; background: #cfcbd3; position: relative; transition: background 0.2s; }
+.mic-switch .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: transform 0.2s; }
+.mic-switch input:checked + .track { background: #b5838d; }
+.mic-switch input:checked + .track .knob { transform: translateX(14px); }
+.mic-note { position: absolute; left: 0; right: 0; top: 50%; text-align: center; color: var(--dim); font-size: 13px; }
+.mic-heard { position: absolute; right: 16px; top: 8px; font: 26px/1 var(--emoji); opacity: 0; }
+.mic-heard.show { animation: heard 1.6s ease-out; }
+@keyframes heard { 0% { opacity: 1; transform: scale(1.2); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }

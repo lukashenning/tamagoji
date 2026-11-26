@@ -26,7 +26,13 @@
           <div class="creature-wrap"><div class="dreams" id="dreams"></div><div class="creature" id="creature"></div></div>
           <div class="label" id="label"></div>
         </div>
-        <div class="palette-wrap" id="palette-wrap"><div class="palette" id="palette"></div></div>
+        <div class="palette-wrap" id="palette-wrap"><div class="kb-inner"><div class="palette" id="palette"></div><div class="mic-panel" id="mic-panel" hidden></div></div></div>
+        <div class="confirm" id="menu" hidden>
+          <div class="confirm-card menu-card" role="dialog" aria-modal="true" aria-label="Menu">
+            <button type="button" id="menu-mic">Mic</button>
+            <button type="button" id="menu-new">New creature</button>
+          </div>
+        </div>
         <div class="confirm" id="confirm" hidden>
           <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-text">
             <div class="confirm-egg">🥚</div>

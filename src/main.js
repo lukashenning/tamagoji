@@ -9,6 +9,7 @@ import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
 import { buildPanel } from './ui/panel.js';
 import { buildCreature } from './ui/creature.js';
+import { buildMic } from './ui/mic.js';
 import { playMelody, playDreamMelody, dreamSoundOn, setDreamSound, setDreaming, unlockAudio, setSound, soundOn } from './ui/sound.js';
 import { newCreature, loadCreature, saveCreature, loadParams, saveParams, exportFile, importFile } from './ui/store.js';
 
@@ -76,10 +77,12 @@ function append(entry) {
 }
 
 // ── player input ──
-function playerSend(tok) {
+/** Your sign (keyboard, gesture, or heard through the microphone: `heard`, then it plays nothing). */
+function playerSend(tok, { heard = false } = {}) {
   unlockAudio();
   const now = s.clock.now();
   const m = s.mind;
+  if (heard && (!m.awake || m.turn !== 'P')) return; // heard while it sleeps or is about to answer: ignored
   if (!m.awake) {
     // asleep: any tap or swipe on the stage wakes it, always as your ❓ (the keyboard is hidden).
     // Woken with little energy, it soon nods off again by itself.
@@ -88,7 +91,7 @@ function playerSend(tok) {
     tok = ASK;
   } else if (m.turn !== 'P') return;
   append({ t: s.clock.now(), who: 'P', tok });
-  if (ELEMENTALS.includes(tok)) playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
+  if (ELEMENTALS.includes(tok) && !heard) playMelody(tok, PLAYER_VOICE, 0.8, -1); // your ✓ ✗ ❓: an octave lower, in your own sound
   s.replyAt = null;
   render();
 }
@@ -148,6 +151,11 @@ function tick() {
     if (now - m.lastEntryT > idleMs) {
       // left alone (also when the app was closed): it fell asleep back then
       append({ t: m.lastEntryT + idleMs, who: 'S', tok: SLEEP });
+    } else if (s.mic && m.turn === 'P' && now - m.lastEntryT > s.callAfter) {
+      // mic mode: after a few quiet seconds it calls out ❓, so other creatures nearby hear it
+      append({ t: now, who: 'C', tok: ASK });
+      playMelody(ASK, voiceFor(m.seats));
+      s.callAfter = 5000 + Math.random() * 5000;
     } else if (m.turn === 'C') {
       if (s.replyAt === null) s.replyAt = now + rand(s.params.replyDelaySec) * 1000;
       if (now >= s.replyAt) {
@@ -541,9 +549,36 @@ const handlers = {
   },
 };
 
-// ── logo: tap it to start over with a new creature (after asking) ──
+// ── logo: the menu (Mic · New creature) ──
+const menu = document.getElementById('menu');
 const confirmBox = document.getElementById('confirm');
-document.getElementById('logo').addEventListener('click', () => (confirmBox.hidden = false));
+document.getElementById('logo').addEventListener('click', () => (menu.hidden = false));
+menu.addEventListener('click', (e) => e.target === menu && (menu.hidden = true)); // tap outside: close
+document.getElementById('menu-new').addEventListener('click', () => {
+  menu.hidden = true;
+  confirmBox.hidden = false; // asks first
+});
+document.getElementById('menu-mic').addEventListener('click', () => {
+  menu.hidden = true;
+  setMic(true);
+});
+
+// ── mic mode: the keyboard area listens instead (src/ui/mic.js) ──
+const micPanel = document.getElementById('mic-panel');
+const mic = buildMic(micPanel, { onSign: (tok) => playerSend(tok, { heard: true }), onExit: () => setMic(false) });
+async function setMic(on) {
+  if (on === !!s.mic) return;
+  s.mic = on;
+  s.callAfter = 5000 + Math.random() * 5000;
+  document.querySelector('.kb-inner').classList.toggle('mic', on);
+  micPanel.hidden = !on;
+  if (on) {
+    unlockAudio();
+    await mic.start();
+  } else mic.stop();
+}
+// leaving the app ends mic mode (the phone stops the microphone in the background anyway)
+document.addEventListener('visibilitychange', () => document.hidden && setMic(false));
 document.getElementById('confirm-no').addEventListener('click', () => (confirmBox.hidden = true));
 document.getElementById('confirm-yes').addEventListener('click', () => {
   confirmBox.hidden = true;
@@ -599,6 +634,7 @@ document.addEventListener('touchmove', (e) => gameOnly() && e.cancelable && e.pr
 addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!confirmBox.hidden) return void (confirmBox.hidden = true); // Escape closes the question first
+  if (!menu.hidden) return void (menu.hidden = true); // … and the menu
   if (touchDevice.matches) return;
   desktopGameOnly = !desktopGameOnly;
   applyLayout();

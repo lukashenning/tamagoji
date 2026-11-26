@@ -25,6 +25,15 @@ export function setSound(on) {
   } catch {}
 }
 
+/** The audio context (made on first use; the microphone's listening runs on it too). */
+export function audioContext() {
+  return audio();
+}
+
+let busyUntil = 0; // performance.now() until which this device is making sound (mic mode doesn't listen then)
+/** Is this device playing (or just played) a melody? Mic mode ignores what it hears meanwhile. */
+export const playingNow = () => performance.now() < busyUntil;
+
 function audio() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -202,6 +211,8 @@ export function playMelody(tok, voice = DEFAULT_VOICE, volume = 1, octave = 0, {
   const step = durationMs / MELODY_STEPS / 1000;
   const t0 = ac.currentTime + 0.02;
   const out = reverb ? reverbBus(ac) : ac.destination;
+  // busy while it sounds, plus its ring and echo in the room
+  busyUntil = Math.max(busyUntil, performance.now() + 20 + durationMs + (reverb ? 1700 : 450));
   melodyFor(tok).forEach((freq, i) => {
     if (freq) playNote(ac, out, freq * Math.pow(2, octave), t0 + i * step, step, voice, volume);
   });

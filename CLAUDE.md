@@ -19,8 +19,9 @@ dream jumps, 10% cross-association, level 5 from 19 (player styles: `jsc -m test
 from complexity (level 1 = eyes, hat, mouth), per-sign moves, fixed poses. Art: the user's drawing
 sheets → `scripts/extract_parts.py` (traced to SVG in `art/parts/`) → `scripts/build_parts.py` →
 `assets/parts/parts.json`; 5 styles per part so far. UI: tap creature ✓,
-tap around ❓, swipe through ✗, soft flashes, exchange row bottom left; phones/tablets game-only,
-Escape toggles game-only on desktop (D71). Browser storage `tamagoji.creature.exp1` (kept so the
+tap around ❓, swipe sideways ✗, sign row above its head, night sky and clouds while asleep; phones/tablets game-only,
+Escape toggles game-only on desktop (D71). **Mic mode** (D108, docs/08): heard melodies become signs, two devices talk;
+unique melodies, listener in `src/core/hearing.js`, check `jsc -m tests/hearing.js` (~100 s). Browser storage `tamagoji.creature.exp1` (kept so the
 user's creature survives). Rule checks over simulated play: `jsc -m tests/play.js` (40 creatures ×
 1500 steps, ~7 s); proximity vs sequence learning: `jsc -m tests/proximity.js` (~10 s). `sim/` is
 not updated for it.
