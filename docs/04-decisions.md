@@ -110,3 +110,4 @@
 | D103 | 2026-11-26 | The night-sky colour change takes 0.6 s (was 2.5 s), clearly quicker than the keyboard slide and the clouds. | accepted | user |
 | D104 | 2026-11-26 | The night sky no longer blends in: it moves in from above when it falls asleep and moves on out at the bottom when it wakes (2.5 s each), with soft gradient edges (revises D103). | accepted | user |
 | D106 | 2026-11-26 | The moving night sky is undone (D104, D105): the night sky fades in and out again, over 2.5 s. | accepted | user |
+| D107 | 2026-11-26 | Audio on iPhone after reopening: when the page comes back to the screen (tab/app reopened, phone unlocked, back-forward restore), the audio context is closed and rebuilt at the next touch, instead of trusting the old one (which often stays silent on iPhone). | accepted | user |

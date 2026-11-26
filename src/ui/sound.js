@@ -49,13 +49,38 @@ export function unlockAudio() {
   if (ac.state === 'running') unlocked = true;
 }
 
-// switch the audio on at the very first touch, anywhere (not only when a sign is sent), and again
-// when the app comes back to the screen (iPhone pauses it in the background)
+/**
+ * Start the audio fresh: the old audio context is closed and everything built on it forgotten; the
+ * next touch makes a new one. On iPhone, a context that was in the background (app or tab closed and
+ * reopened, phone locked) often stays silent even when it says it is running, so we don't trust it.
+ */
+function resetAudio() {
+  if (ctx) {
+    try {
+      ctx.close();
+    } catch {}
+  }
+  ctx = null;
+  noise = null;
+  bus = null;
+  dreamOut = null;
+  unlocked = false;
+}
+
+// switch the audio on at the very first touch, anywhere (not only when a sign is sent); when the app
+// comes back to the screen, start the audio fresh (switched on again at the next touch)
 if (typeof window !== 'undefined') {
   for (const type of ['pointerdown', 'touchend', 'click', 'keydown']) window.addEventListener(type, unlockAudio, { capture: true, passive: true });
+  let wasHidden = false;
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && ctx && ctx.state !== 'running') ctx.resume();
+    if (document.hidden) wasHidden = true;
+    else if (wasHidden) {
+      wasHidden = false;
+      resetAudio();
+    }
   });
+  // reopened from the browser's back-forward memory (iPhone keeps closed tabs like that)
+  window.addEventListener('pageshow', (e) => e.persisted && resetAudio());
 }
 
 function noiseBuffer(ac) {
