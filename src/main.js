@@ -147,14 +147,23 @@ function tick() {
   const m = s.mind;
   const idleMs = m.idleSleepMs(); // shorter the more tired; never at full energy
 
+  // left alone since: its last entry; in mic mode your (or a heard) last sign, its waking, or switching
+  // mic mode on, since its own ❓ calls don't count as company
+  const alone = s.mic ? Math.max(m.lastActivity, s.micSince) : m.lastEntryT;
   if (m.awake) {
-    if (now - m.lastEntryT > idleMs) {
+    if (now - alone > idleMs) {
       // left alone (also when the app was closed): it fell asleep back then
-      append({ t: m.lastEntryT + idleMs, who: 'S', tok: SLEEP });
+      append({ t: alone + idleMs, who: 'S', tok: SLEEP });
     } else if (s.mic && m.turn === 'P' && now - m.lastEntryT > s.callAfter) {
-      // mic mode: after a few quiet seconds it calls out ❓, so other creatures nearby hear it
-      append({ t: now, who: 'C', tok: ASK });
-      playMelody(ASK, voiceFor(m.seats));
+      // mic mode: after a few quiet seconds it calls out ❓, so other creatures nearby hear it; when
+      // tired it may nod off instead (the same chance as when it answers)
+      const e = m.energy / m.capacity;
+      const p = s.params;
+      if (e < p.sleepyBelow && Math.random() < p.nodOffMax * ((p.sleepyBelow - e) / p.sleepyBelow) ** 2) append({ t: now, who: 'S', tok: SLEEP });
+      else {
+        append({ t: now, who: 'C', tok: ASK });
+        playMelody(ASK, voiceFor(m.seats));
+      }
       s.callAfter = 5000 + Math.random() * 5000;
     } else if (m.turn === 'C') {
       if (s.replyAt === null) s.replyAt = now + rand(s.params.replyDelaySec) * 1000;
@@ -569,6 +578,7 @@ const mic = buildMic(micPanel, { onSign: (tok) => playerSend(tok, { heard: true 
 async function setMic(on) {
   if (on === !!s.mic) return;
   s.mic = on;
+  s.micSince = s.clock.now();
   s.callAfter = 5000 + Math.random() * 5000;
   document.querySelector('.kb-inner').classList.toggle('mic', on);
   micPanel.hidden = !on;

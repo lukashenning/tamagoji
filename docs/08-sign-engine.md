@@ -222,6 +222,9 @@ mode.
   ignored. Heard signs are ignored while it sleeps or while it is about to answer.
 - **Calling out:** in mic mode, after 5–10 s with nothing said, it says ❓, so creatures nearby hear it
   and answer; two devices in mic mode keep a dialogue going by themselves.
+- **Sleep in mic mode** works as with the keyboard (D110): its own ❓ calls don't count as company, so
+  left without heard or typed signs it falls asleep after the usual idle time; when tired it may nod
+  off instead of calling out (the same chance as when it answers).
 - The bell-like shimmer of voices is now only in the strike of a note (~12 ms), so pitches are clear.
 - Offline check: `jsc -m tests/hearing.js` (melodies synthesised in 10 voices, in a simulated room with
   echo and noise): 92–100% recognised (with guessing), at most 4% wrong signs; noise alone gives no

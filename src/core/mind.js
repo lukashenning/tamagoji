@@ -517,6 +517,7 @@ export class Mind {
 
   /** `byItself`: it woke up on its own (rested), not woken by you: it greets you with a surprise sign. */
   wakeUp(t, byItself = false) {
+    this.lastActivity = t; // being left alone counts from here
     if (this.sleep) {
       // learn from the dream, as far as it got (sleep consolidates)
       const s = this.sleep;
