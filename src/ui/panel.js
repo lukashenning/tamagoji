@@ -2,7 +2,7 @@
 // Plain text and simple numbers. See docs/08 (the sign engine).
 
 import { SLIDERS, DEFAULT_PARAMS } from '../core/params.js';
-import { SLEEP, WAKE, BIRTH } from '../core/tokens.js';
+import { SLEEP, WAKE, BIRTH, ENERGY } from '../core/tokens.js';
 import { melodyText, keyOf, KEY_NAMES } from '../core/melody.js';
 import { voiceFor, voiceText } from '../core/voice.js';
 import { soundOn } from './sound.js';
@@ -42,6 +42,9 @@ export function buildPanel(root, h) {
       <div class="row"><b>level</b>
         <button data-level="0">auto</button>
         ${[1, 2, 3, 4, 5].map((n) => `<button data-level="${n}">${n}</button>`).join('')}
+        <b style="margin-left:16px">energy</b>
+        <input type="range" class="energy-set" min="0" max="100" step="1">
+        <output class="energy-out"></output>
         <input type="file" accept="application/json,.json" hidden>
       </div>
       <div class="sliders">
@@ -90,7 +93,12 @@ export function buildPanel(root, h) {
     if (fileInput.files[0]) showNote(await h.importCreature(fileInput.files[0]));
     fileInput.value = '';
   });
-  root.querySelectorAll('input[type=range]').forEach((inp) =>
+  // energy: set by hand (written into the history when you let go of the slider)
+  const energyIn = root.querySelector('.energy-set');
+  const energyOut = root.querySelector('.energy-out');
+  energyIn.addEventListener('input', () => (energyOut.textContent = energyIn.value + '%'));
+  energyIn.addEventListener('change', () => h.setEnergy(Number(energyIn.value) / 100));
+  root.querySelectorAll('input[type=range]:not(.energy-set)').forEach((inp) =>
     inp.addEventListener('input', () => h.setParam(inp.dataset.key, Number(inp.value))),
   );
 
@@ -98,6 +106,11 @@ export function buildPanel(root, h) {
   function syncControls(s) {
     soundBtn.textContent = soundOn() ? 'sound on' : 'sound off';
     root.querySelectorAll('[data-warp]').forEach((b) => b.classList.toggle('on', Number(b.dataset.warp) === s.clock.warp));
+    if (document.activeElement !== energyIn) {
+      const pctNow = Math.round((100 * s.mind.energyAt(s.clock.now())) / s.mind.capacity);
+      energyIn.value = pctNow;
+      energyOut.textContent = pctNow + '%';
+    }
     root.querySelectorAll('[data-level]').forEach((b) => b.classList.toggle('on', Number(b.dataset.level) === (s.params.levelOverride || 0)));
     for (const sl of SLIDERS) {
       const inp = root.querySelector(`input[data-key="${sl.key}"]`);
@@ -226,6 +239,7 @@ export function buildPanel(root, h) {
     const hist = s.save.history.slice(-160).map((e, i) => {
       if (e.tok === BIRTH) return `<span class="h-sys">birth</span>`;
       if (e.tok === SLEEP) return `<span class="h-sys">💤 ${new Date(e.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+      if (e.tok === ENERGY) return `<span class="h-sys">⚡ ${Math.round(Number(e.m) * 100)}%</span>`;
       if (e.tok === WAKE) return `<span class="h-sys">☀︎ ${e.m === 'manual' ? 'woken' : 'wakes'} ${new Date(e.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
       const cls = e.who === 'C' ? 'h-c' : 'h-p';
       const mark = e.m === 'surprise' ? '✦' : e.m === 'seed' ? '°' : '';

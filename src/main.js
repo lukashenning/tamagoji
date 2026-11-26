@@ -3,7 +3,7 @@
 
 import { Mind } from './core/mind.js';
 import { ENGINE_VERSION } from './core/params.js';
-import { SLEEP, WAKE, YES, NO, ASK, ELEMENTALS } from './core/tokens.js';
+import { SLEEP, WAKE, YES, NO, ASK, ELEMENTALS, ENERGY } from './core/tokens.js';
 import { recentEmojis, hourlySet } from './core/keyboard.js';
 import { voiceFor, ARCHETYPES, PLAYER_VOICE } from './core/voice.js';
 import { buildPalette } from './ui/palette.js';
@@ -201,13 +201,14 @@ function lastEntry(who) {
  * send something other than ✗. */
 const ROW_MAX = 5;
 const real = (e) => e.who !== 'S' && !ELEMENTALS.includes(e.tok);
+const boundary = (e) => e.who === 'S' && e.tok !== ENERGY; // sleep, wake, birth end an exchange (setting energy doesn't)
 
 /** The row as it stands just before history index `end`. */
 function rowBefore(h, end) {
   const row = [];
   for (let i = end - 1; i >= 0 && row.length < ROW_MAX; i--) {
     const e = h[i];
-    if (e.who === 'S') break;
+    if (boundary(e)) break;
     if (ELEMENTALS.includes(e.tok)) {
       if (e.who === 'P' && e.tok !== ASK) break;
       continue;
@@ -221,7 +222,7 @@ function exchangeRow() {
   const h = s.save.history;
   // your latest answer (❓ doesn't count): only a ✗ keeps the context
   let last = -1;
-  for (let i = h.length - 1; i >= 0 && h[i].who !== 'S'; i--) {
+  for (let i = h.length - 1; i >= 0 && !boundary(h[i]); i--) {
     if (h[i].who === 'P' && h[i].tok !== ASK) {
       last = i;
       break;
@@ -230,14 +231,14 @@ function exchangeRow() {
   if (last < 0 || h[last].tok !== NO) return rowBefore(h, h.length);
   // the first ✗ of your run of ✗ (❓ in between allowed), and the sign it rejected
   let first = last;
-  for (let i = last - 1; i >= 0 && h[i].who !== 'S'; i--) {
+  for (let i = last - 1; i >= 0 && !boundary(h[i]); i--) {
     if (h[i].who !== 'P') continue;
     if (h[i].tok === NO) first = i;
     else if (h[i].tok !== ASK) break;
   }
   let rejected = first - 1;
-  while (rejected >= 0 && h[rejected].who !== 'S' && !real(h[rejected])) rejected--;
-  if (rejected < 0 || h[rejected].who === 'S') return rowBefore(h, h.length);
+  while (rejected >= 0 && !boundary(h[rejected]) && !real(h[rejected])) rejected--;
+  if (rejected < 0 || boundary(h[rejected])) return rowBefore(h, h.length);
   // what came before it, plus its newest try after your latest ✗
   const tries = h.slice(last + 1).filter(real);
   return [...rowBefore(h, rejected), ...tries].slice(-ROW_MAX);
@@ -463,6 +464,9 @@ const handlers = {
   },
   sleepNow() {
     if (s.mind.awake) append({ t: s.clock.now(), who: 'S', tok: SLEEP });
+  },
+  setEnergy(share) {
+    append({ t: s.clock.now(), who: 'S', tok: ENERGY, m: String(share) });
   },
   wakeNow() {
     if (!s.mind.awake) append({ t: s.clock.now(), who: 'S', tok: WAKE, m: 'manual' });

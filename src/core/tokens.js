@@ -16,6 +16,7 @@ export const PASS = ASK;
 export const SLEEP = '⟨sleep⟩';
 export const WAKE = '⟨wake⟩';
 export const BIRTH = '⟨birth⟩';
+export const ENERGY = '⟨energy⟩'; // lab panel: its energy set by hand (m = share 0…1), part of the history so replay matches
 
 // tokens from saves made before the elemental signs existed
 export const LEGACY = { '⟨wait⟩': ASK, '⟨pass⟩': ASK };

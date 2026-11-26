@@ -2,7 +2,7 @@
 // mind = replay(history). observe(entry) is the only way state changes, live and on replay.
 // decide() picks its next move; the app writes it into the history and observes it.
 
-import { YES, NO, ASK, SLEEP, WAKE, BIRTH, LEGACY, isElemental } from './tokens.js';
+import { YES, NO, ASK, SLEEP, WAKE, BIRTH, ENERGY, LEGACY, isElemental } from './tokens.js';
 import { measureComplexity } from './complexity.js';
 import { rngFor, sample, pick, hashString } from './rng.js';
 import { makeCharacter, ALL } from './emojiIndex.js';
@@ -79,6 +79,7 @@ export class Mind {
     if (tok === BIRTH) return this.born(e);
     if (tok === SLEEP) return this.awake && this.fallAsleep(e.t);
     if (tok === WAKE) return !this.awake && this.wakeUp(e.t, e.m !== 'manual');
+    if (tok === ENERGY) return this.setEnergy(e.t, Number(e.m));
     if (e.who === 'P') {
       this.answerMove(tok);
       if (isElemental(tok)) this.playerSpecial(tok, e.t);
@@ -496,6 +497,18 @@ export class Mind {
   }
 
   /** Current energy, including what it has recovered so far while sleeping. */
+  /** Lab panel: set its energy (share 0…1) at time t. Asleep, it then recovers from there. */
+  setEnergy(t, share) {
+    const v = this.capacity * Math.max(0, Math.min(1, Number.isFinite(share) ? share : 1));
+    if (!this.sleep) {
+      this.energy = v;
+      return;
+    }
+    const s = this.sleep;
+    s.energyAtStart = v - Math.max(0, t - s.start) * s.rate; // so that energyAt(t) = v
+    s.restedAt = t + (this.capacity - v) / s.rate;
+  }
+
   energyAt(now) {
     if (!this.sleep) return this.energy;
     const s = this.sleep;
