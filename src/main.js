@@ -406,6 +406,7 @@ function sleepClouds(tiredness, asleep) {
     nextCloudBirth = performance.now() + cloudGap() * (0.5 + Math.random());
   }
   document.querySelector('.stage').classList.toggle('sleeping', asleep);
+  document.querySelector('.phone').classList.toggle('night', asleep); // the night sky
 }
 
 /** Milliseconds between new clouds, so that about cloudWant are on the stage at a time. */

@@ -152,7 +152,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
   overflow: hidden;
   transition: height 1.6s cubic-bezier(0.45, 0, 0.25, 1); /* a calm slide into and out of sleep */
 }
-.phone { user-select: none; -webkit-user-select: none; }
+.phone { user-select: none; -webkit-user-select: none; isolation: isolate; }
+/* while it sleeps the game turns into a night sky (deep blue, lighter towards the bottom, not black);
+   it fades in and out slowly */
+.phone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, #161d3a 0%, #222c55 55%, #34407a 100%);
+  opacity: 0;
+  transition: opacity 2.5s ease-in-out;
+  pointer-events: none;
+}
+.phone.night::before { opacity: 1; }
 .palette {
   flex: none;
   display: flex;
