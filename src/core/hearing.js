@@ -8,10 +8,10 @@
 // 2. Melody: when sound with a clear pitch starts after a quiet moment, that is the start of a melody.
 //    The next 5 steps (100 ms each) are read: each step's note is the pitch heard most often in it, or
 //    a pause if there was hardly anything. If the 5 steps are exactly some sign's melody, it is heard.
-//    Melodies differ in at least 2 steps (src/core/melody.js), so one misheard note gives no sign at all
-//    rather than a wrong one.
+//    If one or two notes were misheard, it guesses: the sign whose melody is closest (fewest wrong
+//    steps, then the smallest pitch differences; D109).
 
-import { MELODY_STEPS, MELODY_MS, melodyPitches, signForMelody, midiToHz } from './melody.js';
+import { MELODY_STEPS, MELODY_MS, melodyPitches, signForMelody, nearestSign, midiToHz } from './melody.js';
 
 const STEP_MS = MELODY_MS / MELODY_STEPS;
 
@@ -81,8 +81,12 @@ const rms = (frame) => {
  * Feed it frames (Float32Array, ~1024 samples, every ~10 ms) with the time (ms) of each frame's middle.
  */
 export class MelodyListener {
-  constructor({ sampleRate, onSign = () => {}, onFrame = () => {} }) {
+  constructor({ sampleRate, onSign = () => {}, onFrame = () => {}, guess = {} }) {
     this.sampleRate = sampleRate;
+    // guessing a misheard melody: at most this many wrong steps, at most this much pitch difference in
+    // total over them (semitones; a pause heard as a note or the other way round counts 6), and at
+    // least this many notes that fit exactly
+    this.guess = { maxWrong: 2, maxCost: 2, minFit: 3, ...guess };
     this.onSign = onSign;
     this.onFrame = onFrame; // (info) for the visualiser
     const pitches = melodyPitches();
@@ -145,13 +149,24 @@ export class MelodyListener {
     }
   }
 
-  /** The 5 steps of what was heard, tried at a few small shifts of the start; a sign or null. */
+  /**
+   * The 5 steps of what was heard, tried at a few small shifts of the start; a sign or null. First an
+   * exact match; otherwise the closest melody with one, then two misheard steps (a guess).
+   */
   decode() {
-    for (const shift of [0, -15, 15, -30, 30]) {
-      const sign = signForMelody(this.steps(this.start + shift));
+    const shifts = [0, -15, 15, -30, 30];
+    const tries = shifts.map((sh) => this.steps(this.start + sh));
+    for (const notes of tries) {
+      const sign = signForMelody(notes);
       if (sign) return sign;
     }
-    return null;
+    let best = null;
+    for (const notes of tries) {
+      if (notes.filter((n) => typeof n === 'number').length < 3) continue; // hardly any notes: not a melody
+      const near = nearestSign(notes, this.guess.maxWrong, this.guess.minFit);
+      if (near && near.cost <= this.guess.maxCost && (!best || near.wrong < best.wrong || (near.wrong === best.wrong && near.cost < best.cost))) best = near;
+    }
+    return best ? best.sign : null;
   }
 
   steps(t0) {
@@ -169,9 +184,12 @@ export class MelodyListener {
       const ex = pitched.map((f) => f.exact).sort((a, b) => a - b);
       const median = ex.length ? ex[Math.floor(ex.length / 2)] : null;
       const m = median === null ? null : Math.round(median);
-      // unsteady pitch within the step (e.g. a strong bell shimmer): not trusted, the melody is dropped
+      // unsteady pitch within the step (e.g. a strong bell shimmer): this step is unclear
       const spread = ex.length >= 3 ? ex[Math.floor(ex.length * 0.8)] - ex[Math.floor(ex.length * 0.2)] : 0;
-      if (spread > 1.0) return Array(MELODY_STEPS).fill(undefined);
+      if (spread > 1.0) {
+        notes.push(undefined);
+        continue;
+      }
       // a pause: hardly any clear pitch, or only the fading echo of the step before
       const pause = !inStep.length || m === null || !this.pitches.has(m) || Math.abs(median - m) > 0.45 || pitched.length < Math.max(1, (late.length || inStep.length) * 0.34) || peak < first * 0.3;
       notes.push(pause ? null : m);

@@ -211,6 +211,10 @@ mode.
   has settled), or a pause; an unsteady step drops the melody. If the 5 steps are exactly some sign's
   melody (also your ✓ ✗ ❓ an octave lower), that sign is entered **exactly like keyboard input** (no
   mark in the history), but silently (your ✓ ✗ ❓ melody isn't played back).
+- **Guessing (D109):** if no melody fits exactly, it guesses the closest one, allowing up to 2 misheard
+  steps, as long as they were only slightly off (together at most 2 semitones; an unclear step counts
+  1, a pause heard as a note or the other way round counts as far off) and at least 3 notes fit
+  exactly. Among equally close melodies the one with the smallest pitch differences wins.
 - **Unique melodies:** no two signs share a melody and any two differ in at least 2 of the 5 steps
   (except the fixed ✅ / ❌, whose last notes are an octave apart), so one misheard note gives nothing
   rather than a wrong sign (`src/core/melody.js`). This changed every emoji's melody.
@@ -220,7 +224,8 @@ mode.
   and answer; two devices in mic mode keep a dialogue going by themselves.
 - The bell-like shimmer of voices is now only in the strike of a note (~12 ms), so pitches are clear.
 - Offline check: `jsc -m tests/hearing.js` (melodies synthesised in 10 voices, in a simulated room with
-  echo and noise): 92–100% recognised, at most 1% wrong signs.
+  echo and noise): 92–100% recognised (with guessing), at most 4% wrong signs; noise alone gives no
+  signs, random tone sequences (other music, whistling) about one sign every 8 s.
 - The microphone needs a secure page: it works on the live site (https) and on `localhost`, not on the
   local network address (http://192.168.…). On iPhone, Safari is asked to keep playing through the
   loudspeaker while the microphone is on (`navigator.audioSession`).

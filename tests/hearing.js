@@ -98,7 +98,7 @@ function trial(tok, voice, rng, cond) {
   const y = cond.wet ? room(x, cond.wet) : x;
   if (cond.snr !== undefined) noise(y, cond.snr, rng);
   const heard = [];
-  const L = new MelodyListener({ sampleRate: SR, onSign: (s) => heard.push(s) });
+  const L = new MelodyListener({ sampleRate: SR, onSign: (s) => heard.push(s), guess: SIM.guess });
   const N = 512; // ~21 ms at 24 kHz (in the browser: 1024 at 48 kHz)
   const hop = 256; // ~10 ms
   for (let i = N; i <= y.length; i += hop) L.feed(((i - N / 2) / SR) * 1000, y.subarray(i - N, i));
@@ -149,4 +149,29 @@ for (const tok of [YES, NO, ASK])
     if (heard.length === 1 && heard[0] === tok) ok++;
   }
 log(`\nyour ✓ ✗ ❓ (octave lower, your sound), all conditions: ${ok} of ${n} heard right`);
+
+// false alarms: sounds that are no melody (with room echo): background noise alone, and random tone
+// sequences (other music, whistling: random pitches, also between the semitones)
+function falseAlarms(kind) {
+  let signs = 0;
+  const runs = Math.max(20, Math.round(TRIALS / 2));
+  for (let k = 0; k < runs; k++) {
+    const x = new Float32Array(Math.round(2.5 * SR));
+    if (kind === 'tones') {
+      let t = 0.3;
+      while (t < 2.2) {
+        const f = 500 + rng() * 2500;
+        const dur = 0.06 + rng() * 0.25;
+        for (let i = Math.round(t * SR); i < Math.min(x.length, Math.round((t + dur) * SR)); i++) x[i] += 0.2 * Math.sin((2 * Math.PI * f * i) / SR) * Math.min(1, (i - t * SR) / 100);
+        t += dur + rng() * 0.15;
+      }
+    }
+    const y = room(x, 0.35);
+    noise(y, kind === 'noise' ? -20 : 15, rng); // noise alone: just noise at a fixed level
+    const L = new MelodyListener({ sampleRate: SR, onSign: () => signs++, guess: SIM.guess });
+    for (let i = 512; i <= y.length; i += 256) L.feed(((i - 256) / SR) * 1000, y.subarray(i - 512, i));
+  }
+  return `${signs} signs in ${runs} × 2.5 s`;
+}
+log(`false alarms: background noise alone: ${falseAlarms('noise')} · random tones (not melodies): ${falseAlarms('tones')}`);
 log(`(${((Date.now() - t0) / 1000).toFixed(0)} s)`);

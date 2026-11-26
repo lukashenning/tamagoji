@@ -117,6 +117,36 @@ export function signForMelody(notes) {
   return BY_MELODY.get(melodyKey(notes)) ?? null;
 }
 
+/**
+ * The sign whose melody is closest to what was heard, when up to `maxWrong` steps were misheard:
+ * { sign, wrong, cost } or null. Heard steps: MIDI number, null (a pause) or undefined (unclear).
+ * Closest = fewest wrong steps; among those, the smallest pitch differences (a note heard a semitone
+ * off is more likely than one heard far off). It needs at least 2 clearly heard notes that fit.
+ */
+export function nearestSign(heard, maxWrong = 2, minFit = 2) {
+  if (!BY_MELODY) build();
+  let best = null;
+  for (const [key, sign] of BY_MELODY) {
+    const notes = key.split(',').map((n) => (n === '-' ? null : Number(n)));
+    let wrong = 0;
+    let cost = 0;
+    let fit = 0;
+    for (let i = 0; i < notes.length && wrong <= maxWrong; i++) {
+      const h = heard[i];
+      const n = notes[i];
+      if (h === n) {
+        if (n !== null) fit++;
+        continue;
+      }
+      wrong++;
+      cost += h === undefined ? 1 : h === null || n === null ? 6 : Math.min(6, Math.abs(h - n));
+    }
+    if (wrong > maxWrong || fit < minFit) continue;
+    if (!best || wrong < best.wrong || (wrong === best.wrong && cost < best.cost)) best = { sign, wrong, cost };
+  }
+  return best;
+}
+
 /** Every pitch (MIDI) any melody uses, lowest first (for listening). */
 export function melodyPitches() {
   if (!TABLE) build();
