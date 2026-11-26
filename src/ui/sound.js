@@ -143,8 +143,10 @@ function playNote(ac, out, freq, t, step, v, volume) {
     const mod = ac.createOscillator();
     mod.frequency.value = freq * 2.76;
     const idx = ac.createGain();
+    // the shimmer is only in the strike: it fades within ~12 ms (D108), so the pitch is clear right after
+    // (a long shimmer bends the pitch and makes melodies hard to recognise by ear and in mic mode)
     idx.gain.setValueAtTime(freq * 3 * v.metal, t);
-    idx.gain.exponentialRampToValueAtTime(freq * 0.03 * v.metal + 0.01, t + len * 1.2);
+    idx.gain.setTargetAtTime(0.0001, t, 0.012);
     mod.connect(idx).connect(fundamental.frequency);
     mod.start(t);
     stops.push(mod);
