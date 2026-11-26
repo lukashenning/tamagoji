@@ -154,7 +154,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .phone { user-select: none; -webkit-user-select: none; isolation: isolate; }
 /* while it sleeps the game turns into a night sky (deep blue, lighter towards the bottom, not black);
-   it fades in and out slowly */
+   its colour changes quickly, well before the slower keyboard slide and cloud fade-in */
 .phone::before {
   content: '';
   position: absolute;
@@ -162,7 +162,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   z-index: -1;
   background: linear-gradient(180deg, #161d3a 0%, #222c55 55%, #34407a 100%);
   opacity: 0;
-  transition: opacity 2.5s ease-in-out;
+  transition: opacity 0.6s ease-out;
   pointer-events: none;
 }
 .phone.night::before { opacity: 1; }
