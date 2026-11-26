@@ -153,32 +153,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: height 1.6s cubic-bezier(0.45, 0, 0.25, 1); /* a calm slide into and out of sleep */
 }
 .phone { user-select: none; -webkit-user-select: none; isolation: isolate; }
-/* while it sleeps the game turns into a night sky (deep blue, lighter towards the bottom, not black).
-   The sky moves in from above when night falls and moves on out at the bottom when it wakes. Its top
-   and bottom edges are soft gradients, so no hard edge shows while it moves. The sky layer is twice
-   the game's height: soft edge (¼) · the sky itself (½) · soft edge (¼); translate % = of its own height. */
+/* while it sleeps the game turns into a night sky (deep blue, lighter towards the bottom, not black);
+   it fades in and out */
 .phone::before {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 200%;
+  inset: 0;
   z-index: -1;
+  background: linear-gradient(180deg, #161d3a 0%, #222c55 55%, #34407a 100%);
+  opacity: 0;
+  transition: opacity 2.5s ease-in-out;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(22, 29, 58, 0) 0%, #161d3a 25%, #222c55 50%, #34407a 75%, rgba(52, 64, 122, 0) 100%);
-  transform: translateY(-100%); /* waiting above */
 }
-.phone.night::before { animation: night-in 2.5s ease-in-out forwards; }
-.phone.dawn::before { animation: night-out 2.5s ease-in-out forwards; }
-@keyframes night-in {
-  from { transform: translateY(-100%); }
-  to { transform: translateY(-25%); }
-}
-@keyframes night-out {
-  from { transform: translateY(-25%); }
-  to { transform: translateY(50%); }
-}
+.phone.night::before { opacity: 1; }
 .palette {
   flex: none;
   display: flex;

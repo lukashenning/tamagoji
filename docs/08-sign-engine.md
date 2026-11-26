@@ -109,8 +109,7 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
   visible while it sleeps: falling asleep they fade in slowly (4 s), already spread out; waking they
   fade out (D99). The keyboard slides away and back in 1.6 s.
 - **Night sky** (D102): while it sleeps the whole game view turns into a night sky (deep blue,
-  lighter towards the bottom, not black). It moves in from above when night falls and moves on out
-  at the bottom when it wakes (2.5 s each), with soft gradient edges so no hard edge shows.
+  lighter towards the bottom, not black), fading in and out over 2.5 s.
 
 ## Dreams
 

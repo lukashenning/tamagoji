@@ -406,12 +406,7 @@ function sleepClouds(tiredness, asleep) {
     nextCloudBirth = performance.now() + cloudGap() * (0.5 + Math.random());
   }
   document.querySelector('.stage').classList.toggle('sleeping', asleep);
-  // the night sky: moves in from above when it falls asleep, moves on out at the bottom when it wakes
-  const phone = document.querySelector('.phone');
-  if (asleep !== phone.classList.contains('night')) {
-    phone.classList.toggle('dawn', !asleep);
-    phone.classList.toggle('night', asleep);
-  }
+  document.querySelector('.phone').classList.toggle('night', asleep); // the night sky (fades in and out)
 }
 
 /** Milliseconds between new clouds, so that about cloudWant are on the stage at a time. */
