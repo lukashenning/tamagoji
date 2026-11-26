@@ -108,3 +108,4 @@
 | D101 | 2026-11-26 | The exchange row moves above its head and replaces the speech bubble: newest sign right above the head, older ones to the left, new signs slide in from the right; its signs 100%, yours 50% (inverted). Same clearing rules as before; the latest ✓ ✗ ❓ (either side) shows at the end. Keyboard slide-in no longer snaps (its "finished" signal was triggered by the keys' own fades). | accepted | user |
 | D102 | 2026-11-26 | While it sleeps the game view turns into a night sky (deep blue gradient #161d3a → #34407a, not black), fading over 2.5 s. | accepted | user |
 | D103 | 2026-11-26 | The night-sky colour change takes 0.6 s (was 2.5 s), clearly quicker than the keyboard slide and the clouds. | accepted | user |
+| D104 | 2026-11-26 | The night sky no longer blends in: it moves in from above when it falls asleep and moves on out at the bottom when it wakes (2.5 s each), with soft gradient edges (revises D103). | accepted | user |
