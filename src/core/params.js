@@ -57,7 +57,7 @@ export const DEFAULT_PARAMS = {
   characterSize: 7,
 
   // top signs → seats (look) and voice
-  outputWindow: 1000, // ranked by use in its last this many outputs
+  outputWindow: 300, // ranked by use in its last this many outputs (D99; was 1000)
   seats: 7, // one per part: eyes, hat, mouth, legs, arms, nose, object (D77)
   levelAt: [6, 10, 15, 19], // complexity needed for levels 2…5 (a consistent teacher: level 5 in ~2 days; D92)
   objectMoveChance: 0.33, // each time it says something, its object moves to another spot with this chance

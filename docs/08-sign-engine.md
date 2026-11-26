@@ -105,8 +105,9 @@ When you press ☐ again and again, it simply chains predictions, like dreaming,
   towards the bottom, never up at the logo), some behind the creature and some (fainter) in front of
   it. Sizes 40–260 px: mostly small and medium, now and then a big one. How many: 4 at full energy up
   to 24 when it's empty, smoothly in between. They come in at a steady pace, each placed where there
-  is the most room, so they spread out instead of clumping; when it falls asleep the sky fills at once,
-  spread out; when it wakes they fade away.
+  is the most room, so they spread out instead of clumping. They float all the time but are only
+  visible while it sleeps: falling asleep they fade in slowly (4 s), already spread out; waking they
+  fade out (D99). The keyboard slides away and back in 1.6 s.
 
 ## Dreams
 
@@ -179,7 +180,7 @@ the history like everything else. Not used for anything else yet.
 
 ## Top 7 → parts → look and voice
 
-- Its signs are ranked by how often it used them in its **last 1000 outputs** (awake real signs,
+- Its signs are ranked by how often it used them in its **last 300 outputs** (awake real signs,
   minus taken-back ones; ties → the more recently used).
 - The top 7 drive the **parts by rank** (D77): 1st → eyes, 2nd → hat, 3rd → mouth, 4th → legs,
   5th → arms, 6th → nose, 7th → object. Its level (from complexity) decides how many are shown.

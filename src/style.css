@@ -162,7 +162,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   flex-direction: column;
   justify-content: flex-end;
   overflow: hidden;
-  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: height 1.6s cubic-bezier(0.45, 0, 0.25, 1); /* a calm slide into and out of sleep */
 }
 .phone { user-select: none; -webkit-user-select: none; }
 .palette {
@@ -354,7 +354,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* sleeping: clouds float across the stage from right to left (moved by main.js); the back layer is
    behind the creature, the front layer in front of it */
-.cloud-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.cloud-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1.5s ease-out; }
+/* they float all the time; falling asleep they slowly fade in, waking they fade out */
+.stage.sleeping .cloud-layer { opacity: 1; transition: opacity 4s ease-in-out 0.6s; }
 .cloud-layer.back { z-index: -1; }
 .cloud-layer.front { z-index: 3; }
 .cloud {

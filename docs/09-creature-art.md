@@ -18,7 +18,7 @@ Code: `src/core/look.js` (rules), `src/ui/creature.js` (drawing), `scripts/build
 There are **5 levels** (D81). The looks of all 7 parts always come from the top 7 signs, whether a
 part is shown yet or not.
 
-- "Most used" = in its last 1000 awake outputs. The parts are re-assigned at birth and after each
+- "Most used" = in its last 300 awake outputs (D99; was 1000). The parts are re-assigned at birth and after each
   sleep; until it has 7 top signs, its seed signs fill up.
 - **Level** comes from complexity (docs/08), checked at each measurement; it grows or shrinks towards
   the level its complexity calls for by **at most one level per sleep** (D97):

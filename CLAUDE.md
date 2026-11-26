@@ -12,7 +12,7 @@ from the user's sketch: associations on levels 1–4 (votes, longer contexts cou
 ✓/✗ on the last real sign (+3/−3, negative links), its own ✓/✗ (your ✗ inverts, ✓ repeats),
 "not that, this" (A ✗ B ✓ takes A back), its ☐ when unsure, surprise (10% base + repetition +
 waiting), ☐ chaining, slow fading, dreams (+0.1, plus proximity links the other way round at +0.04,
-D70), top 6 of its last 1000 outputs → seats (look) and a usage-weighted voice. Complexity =
+D70), top 7 of its last 300 outputs → parts (look) and a usage-weighted voice. Complexity =
 known signs × order, measured after dreams of ≥ 700 signs (D75); engine 1.1 (D92): fading 0.005,
 dream jumps, 10% cross-association, level 5 from 19 (player styles: `jsc -m tests/styles.js`). **Creature graphic** (D77,
 `docs/09-creature-art.md`): no body, up to 7 stacked parts from its top 7 signs by rank, level 1–5

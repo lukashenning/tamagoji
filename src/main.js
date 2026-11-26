@@ -340,7 +340,7 @@ function render() {
   palette.setRandom(hourlySet(s.save.seed, now));
   palette.setLocked(m.awake && m.turn !== 'P');
   slideKeyboard(m.awake);
-  sleepClouds(m.awake ? null : 1 - m.energyAt(now) / m.capacity);
+  sleepClouds(1 - m.energyAt(now) / m.capacity, !m.awake);
 }
 
 // the keyboard slides down out of view (the stage grows into its place) and back up
@@ -361,45 +361,36 @@ function slideKeyboard(show) {
   if (show) kbWrap.addEventListener('transitionend', () => kbShown && (kbWrap.style.height = ''), { once: true });
 }
 
-// sleeping: clouds float slowly across the stage from right to left (born outside on the right,
-// gone outside on the left), some behind the creature, some in front of it. How many: from a few at
-// full energy to a dense tapestry when it's empty; it changes smoothly as its energy comes back.
+// clouds float slowly across the stage from right to left (born outside on the right, gone outside
+// on the left), some behind the creature, some in front of it. They float all the time, but are only
+// visible while it sleeps: falling asleep they slowly fade in (already spread out), waking they fade
+// out. How many: from a few at full energy to many when it's empty, following its energy.
 const CLOUDS_RESTED = 4; // clouds on the stage at full energy
 const CLOUDS_EMPTY = 24; // … and at no energy
-const clouds = []; // { node, x, y, size, w, speed, leaving }
+const clouds = []; // { node, x, fy (height of its centre, share of the stage), size, w, speed }
 const cloudBack = document.getElementById('clouds-back');
 const cloudFront = document.getElementById('clouds-front');
 let cloudWant = 0;
 let lastCloudFrame = 0;
 let nextCloudBirth = 0;
 
-function sleepClouds(tiredness) {
-  const was = cloudWant;
-  cloudWant = tiredness === null ? 0 : Math.round(CLOUDS_RESTED + (CLOUDS_EMPTY - CLOUDS_RESTED) * Math.max(0, Math.min(1, tiredness)));
-  if (!cloudWant) {
-    // awake: the clouds fade away
-    for (const c of clouds) if (!c.leaving) {
-      c.leaving = true;
-      c.node.style.transition = 'opacity 1.5s ease';
-      c.node.style.opacity = '0';
-      setTimeout(() => {
-        c.node.remove();
-        const k = clouds.indexOf(c);
-        if (k >= 0) clouds.splice(k, 1);
-      }, 1600);
-    }
-  } else if (!was) {
-    // it just fell asleep (or the page opened while it sleeps): fill the sky at once, spread out
+/** tiredness 0 (full) … 1 (empty); asleep: show them */
+function sleepClouds(tiredness, asleep) {
+  const first = !cloudWant;
+  cloudWant = Math.round(CLOUDS_RESTED + (CLOUDS_EMPTY - CLOUDS_RESTED) * Math.max(0, Math.min(1, tiredness)));
+  if (first) {
+    // the page just opened: fill the sky at once, spread out
     for (let i = clouds.length; i < cloudWant; i++) addCloud(null);
     nextCloudBirth = performance.now() + cloudGap() * (0.5 + Math.random());
   }
+  document.querySelector('.stage').classList.toggle('sleeping', asleep);
 }
 
 /** Milliseconds between new clouds, so that about cloudWant are on the stage at a time. */
 const cloudGap = () => (((el.stageWidth() + 200) / 12) * 1000) / Math.max(1, cloudWant);
 
-/** Height on the stage: mostly in the lower part, below the creature, never up at the logo. */
-const cloudHeight = (H) => H * (0.28 + 0.74 * Math.sqrt(Math.random()));
+/** Height of a cloud's centre, as a share of the stage: mostly low, below the creature, never up at the logo. */
+const cloudHeight = () => 0.28 + 0.74 * Math.sqrt(Math.random());
 
 /**
  * A new cloud at x (null: anywhere across the stage). Its place is the best of a few random tries:
@@ -412,9 +403,9 @@ function addCloud(x) {
   let best = null;
   for (let k = 0; k < 8; k++) {
     const cx = x === null ? Math.random() * W : x + size * 0.65;
-    const cy = cloudHeight(H);
-    const room = clouds.reduce((mn, c) => Math.min(mn, Math.hypot(cx - (c.x + c.w / 2), cy - (c.y + c.size / 2)) - (c.size + size) / 3), Infinity);
-    if (!best || room > best.room) best = { cx, cy, room };
+    const fy = cloudHeight();
+    const room = clouds.reduce((mn, c) => Math.min(mn, Math.hypot(cx - (c.x + c.w / 2), (fy - c.fy) * H) - (c.size + size) / 3), Infinity);
+    if (!best || room > best.room) best = { cx, fy, room };
   }
   const node = document.createElement('span');
   node.className = 'cloud';
@@ -424,16 +415,24 @@ function addCloud(x) {
   node.style.zIndex = String(Math.round(size));
   node.style.opacity = (front ? 0.22 + Math.random() * 0.3 : 0.35 + Math.random() * 0.45).toFixed(2);
   const w = size * 1.3;
-  const c = { node, size, w, x: best.cx - w / 2, y: Math.max(H * 0.1, best.cy - size / 2), speed: 5 + size * 0.045, leaving: false };
-  node.style.transform = `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px)`; // in place from the start (no flash at the top left)
+  const c = { node, size, w, x: best.cx - w / 2, fy: best.fy, speed: 5 + size * 0.045 };
+  place(c, H); // in place from the start (no flash at the top left)
   (front ? cloudFront : cloudBack).append(node);
   clouds.push(c);
+}
+
+/** Its height follows the stage's height (which grows when the keyboard slides away). */
+function place(c, H) {
+  const y = Math.max(H * 0.1, c.fy * H - c.size / 2);
+  c.node.style.transform = `translate(${c.x.toFixed(1)}px, ${y.toFixed(1)}px)`;
 }
 
 function driftClouds(now) {
   const dt = Math.min(0.1, (now - (lastCloudFrame || now)) / 1000);
   lastCloudFrame = now;
+  if (!cloudWant) return;
   const W = el.stageWidth();
+  const H = el.stageHeight();
   for (let i = clouds.length - 1; i >= 0; i--) {
     const c = clouds[i];
     c.x -= c.speed * dt; // px per second, bigger (closer) clouds a bit faster
@@ -442,11 +441,11 @@ function driftClouds(now) {
       clouds.splice(i, 1);
       continue;
     }
-    c.node.style.transform = `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px)`;
+    place(c, H);
   }
   // new ones come in from the right at a steady pace (a little irregular), about cloudWant on the stage
-  if (cloudWant && now >= nextCloudBirth) {
-    if (clouds.filter((c) => !c.leaving).length < cloudWant + 2) addCloud(W + 10);
+  if (now >= nextCloudBirth) {
+    if (clouds.length < cloudWant + 2) addCloud(W + 10);
     nextCloudBirth = now + cloudGap() * (0.75 + 0.5 * Math.random());
   }
 }
@@ -547,8 +546,12 @@ muteBtn.addEventListener('click', (e) => {
 });
 
 // ── start ──
-// always the newest files (see sw.js); also lets the game start without a connection
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// always the newest files (see sw.js); also lets the game start without a connection. Only on the
+// real site (https): on the local dev server it would quietly show an old copy when the server is off.
+if ('serviceWorker' in navigator) {
+  if (location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  else navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+}
 const look = buildCreature(el.creature);
 s.styleCount = look.styleCount;
 const palette = buildPalette(document.getElementById('palette'), {
