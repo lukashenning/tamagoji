@@ -363,7 +363,8 @@ function render() {
   } else {
     if (flying.length) clearDreams(); // woke up: dreams vanish
     el.label.textContent = m.label();
-    renderSigns(exchangeRow());
+    const row = exchangeRow();
+    renderSigns(s.mic ? row.slice(-1) : row); // in mic mode only the newest sign, above its head
   }
 
   muteBtn.hidden = m.awake; // the dream mute button only while it sleeps
@@ -584,6 +585,12 @@ async function setMic(on) {
   micPanel.hidden = !on;
   if (on) {
     unlockAudio();
+    if (!s.mind.awake) {
+      // switching mic mode on wakes it (it then waits; after a few quiet seconds it calls out ❓)
+      setDreaming(false);
+      append({ t: s.clock.now(), who: 'S', tok: WAKE, m: 'manual' });
+    }
+    render();
     await mic.start();
   } else mic.stop();
 }
